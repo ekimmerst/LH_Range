@@ -1,4 +1,5 @@
 ## Interface: 16001
+## Dependencies: LH_Tweaks
 ## Title: LH_Range
 ## Notes: Shaman target range bar matching LH_ExpBar.
 ## Author: LH_Range

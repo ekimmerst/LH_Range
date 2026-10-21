@@ -46,3 +46,7 @@ To retain your settings, close WoW and back up each character's `WTF/Account/<ac
 - Replaced the previous commands with `/lh_range`.
 - Translated the documentation into English and added instructions for transferring saved settings.
 - Updated the optional width reference to LH_ExpBar and the test support path to LH_AuraBars.
+
+## Required core addon
+
+Install and enable **LH_Tweaks** alongside this addon. LH_Tweaks is the shared LiteHawk configuration host and must load first. CurseForge releases must list LH_Tweaks as a required dependency so the client installs it automatically.
