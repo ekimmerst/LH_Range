@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: LH_Range
+## Notes: Shaman target range bar matching LH_ExpBar.
+## Author: LH_Range
+## Version: 1.1.1
+## SavedVariablesPerCharacter: LH_RangeDB
+
+LH_Range.lua

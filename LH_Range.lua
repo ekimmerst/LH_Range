@@ -40,17 +40,17 @@ local function MeleeRange()
     return false
 end
 local function StandardWidth()
-    local reference = MiniExpBarFrame or Minimap
+    local reference = LH_ExpBarFrame or Minimap
     return reference and reference:GetWidth() * reference:GetEffectiveScale() / bar:GetEffectiveScale() or 140
 end
 local function UpdateSize()
-    bar:SetSize(math.max(70, StandardWidth() * MiniRangeDB.widthFactor), 20 * MiniRangeDB.heightFactor)
+    bar:SetSize(math.max(70, StandardWidth() * LH_RangeDB.widthFactor), 20 * LH_RangeDB.heightFactor)
 end
 local function SavePosition()
     local x, y = bar:GetCenter()
     if not x or not y then return end
     local scale = bar:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    MiniRangeDB.position = {x = x * scale, y = y * scale}
+    LH_RangeDB.position = {x = x * scale, y = y * scale}
     bar:ClearAllPoints()
     bar:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * scale, y * scale)
 end
@@ -63,7 +63,7 @@ local function FinishResize()
 end
 local function RestorePosition()
     bar:ClearAllPoints()
-    local p = MiniRangeDB.position
+    local p = LH_RangeDB.position
     if type(p) == "table" and type(p.x) == "number" and type(p.y) == "number" then
         bar:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p.x, p.y)
     else
@@ -77,7 +77,7 @@ local function UpdateRange()
     local attackable = UnitCanAttack("player", "target")
     local friendly = UnitCanAssist("player", "target")
     local valid = class == "SHAMAN" and UnitExists("target") and (attackable or friendly) and not UnitIsDeadOrGhost("target")
-    if not valid and MiniRangeDB.locked then bar:Hide(); return end
+    if not valid and LH_RangeDB.locked then bar:Hide(); return end
     local text, r, g, b = "Out of Range", 0.8, 0.12, 0.12
     if valid then
         -- Attackable targets use offensive checks even when also assistable.
@@ -87,7 +87,7 @@ local function UpdateRange()
         elseif InRange(spells.earthShock) then text, r, g, b = spells.earthShock, 1, 0.82, 0
         elseif InRange(spells.shock) then text, r, g, b = spells.shock, 1, 0.82, 0
         elseif InRange(spells.bolt) then text, r, g, b = spells.bolt, 0.15, 0.7, 0.2 end
-    else text, r, g, b = "MiniRange", 0.45, 0.45, 0.45 end
+    else text, r, g, b = "LH_Range", 0.45, 0.45, 0.45 end
     label:SetText(text)
     fill:SetStatusBarColor(r, g, b, 1)
     bar:Show()
@@ -95,19 +95,19 @@ end
 local function SetLocked(locked)
     StopMoving()
     FinishResize()
-    MiniRangeDB.locked = locked
+    LH_RangeDB.locked = locked
     bar:EnableMouse(not locked)
     handle:SetShown(not locked)
     UpdateRange()
 end
 local function Initialize()
-    MiniRangeDB = type(MiniRangeDB) == "table" and MiniRangeDB or {}
-    if MiniRangeDB.locked == nil then MiniRangeDB.locked = true end
+    LH_RangeDB = type(LH_RangeDB) == "table" and LH_RangeDB or {}
+    if LH_RangeDB.locked == nil then LH_RangeDB.locked = true end
     for _, key in ipairs({"widthFactor", "heightFactor"}) do
-        local value = MiniRangeDB[key]
-        MiniRangeDB[key] = type(value) == "number" and math.max(0.5, math.min(2, value)) or 1
+        local value = LH_RangeDB[key]
+        LH_RangeDB[key] = type(value) == "number" and math.max(0.5, math.min(2, value)) or 1
     end
-    bar = CreateFrame("Frame", "MiniRangeFrame", UIParent, "BackdropTemplate")
+    bar = CreateFrame("Frame", "LH_RangeFrame", UIParent, "BackdropTemplate")
     bar:SetFrameStrata("MEDIUM")
     bar:SetMovable(true)
     bar:SetClampedToScreen(true)
@@ -119,7 +119,7 @@ local function Initialize()
     fill = CreateFrame("StatusBar", nil, bar)
     fill:SetPoint("TOPLEFT", 3, -3)
     fill:SetPoint("BOTTOMRIGHT", -3, 3)
-    fill:SetStatusBarTexture("Interface\\AddOns\\MiniRange\\Media\\Smooth.tga")
+    fill:SetStatusBarTexture("Interface\\AddOns\\LH_Range\\Media\\Smooth.tga")
     fill:SetMinMaxValues(0, 1)
     fill:SetValue(1)
     fill:EnableMouse(false)
@@ -129,9 +129,9 @@ local function Initialize()
     label:SetTextColor(1, 1, 1, 1)
     label:SetShadowColor(0, 0, 0, 1)
     label:SetShadowOffset(1, -1)
-    bar:SetScript("OnDragStart", function() if not MiniRangeDB.locked and not resizing then bar:StartMoving() end end)
+    bar:SetScript("OnDragStart", function() if not LH_RangeDB.locked and not resizing then bar:StartMoving() end end)
     bar:SetScript("OnDragStop", StopMoving)
-    handle = CreateFrame("Button", "MiniRangeResizeHandle", bar)
+    handle = CreateFrame("Button", "LH_RangeResizeHandle", bar)
     handle:SetSize(16, 16)
     handle:SetPoint("TOPRIGHT", bar, "BOTTOMRIGHT", 0, -4)
     handle:SetFrameLevel(bar:GetFrameLevel() + 10)
@@ -141,14 +141,14 @@ local function Initialize()
     circle:SetTexture("Interface\\Buttons\\UI-RadioButton")
     circle:SetTexCoord(0.25, 0.5, 0, 1)
     handle:SetScript("OnMouseDown", function(_, button)
-        if button ~= "LeftButton" or MiniRangeDB.locked then return end
+        if button ~= "LeftButton" or LH_RangeDB.locked then return end
         StopMoving()
         local x, y = GetCursorPosition()
         local scale = bar:GetEffectiveScale()
         local left, top = bar:GetLeft(), bar:GetTop()
         bar:ClearAllPoints()
         bar:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left * scale / UIParent:GetEffectiveScale(), top * scale / UIParent:GetEffectiveScale())
-        resizing = {x = x / scale, y = y / scale, width = MiniRangeDB.widthFactor, height = MiniRangeDB.heightFactor, base = StandardWidth()}
+        resizing = {x = x / scale, y = y / scale, width = LH_RangeDB.widthFactor, height = LH_RangeDB.heightFactor, base = StandardWidth()}
     end)
     handle:SetScript("OnMouseUp", function(_, button) if button == "LeftButton" then FinishResize() end end)
     handle:SetScript("OnHide", FinishResize)
@@ -156,8 +156,8 @@ local function Initialize()
     RefreshSpells()
     UpdateSize()
     RestorePosition()
-    bar:EnableMouse(not MiniRangeDB.locked)
-    handle:SetShown(not MiniRangeDB.locked)
+    bar:EnableMouse(not LH_RangeDB.locked)
+    handle:SetShown(not LH_RangeDB.locked)
     UpdateRange()
 end
 local events = CreateFrame("Frame")
@@ -179,26 +179,25 @@ events:SetScript("OnUpdate", function(_, elapsed)
         else
             local x, y = GetCursorPosition()
             local scale = bar:GetEffectiveScale()
-            MiniRangeDB.widthFactor = math.max(0.5, math.min(2, resizing.width + (x / scale - resizing.x) / resizing.base))
-            MiniRangeDB.heightFactor = math.max(0.5, math.min(2, resizing.height + (resizing.y - y / scale) / 20))
+            LH_RangeDB.widthFactor = math.max(0.5, math.min(2, resizing.width + (x / scale - resizing.x) / resizing.base))
+            LH_RangeDB.heightFactor = math.max(0.5, math.min(2, resizing.height + (resizing.y - y / scale) / 20))
             UpdateSize()
         end
     end
     elapsedTotal = elapsedTotal + elapsed
     if elapsedTotal >= 0.1 then elapsedTotal = 0; UpdateSize(); UpdateRange() end
 end)
-SLASH_MINIRANGE1 = "/minirange"
-SLASH_MINIRANGE2 = "/minirang"
-SlashCmdList.MINIRANGE = function(message)
+SLASH_LH_RANGE1 = "/lh_range"
+SlashCmdList.LH_RANGE = function(message)
     if not bar then return end
     local command = (message or ""):lower():match("^%s*(.-)%s*$")
     if command == "lock" or command == "unlock" then
         SetLocked(command == "lock")
-        print(MiniRangeDB.locked and "MiniRange: Position locked." or "MiniRange: Drag the bar to move; drag the circle to resize.")
+        print(LH_RangeDB.locked and "LH_Range: Position locked." or "LH_Range: Drag the bar to move; drag the circle to resize.")
     elseif command == "reset" then
         StopMoving(); FinishResize()
-        MiniRangeDB.position = nil
-        MiniRangeDB.widthFactor, MiniRangeDB.heightFactor = 1, 1
+        LH_RangeDB.position = nil
+        LH_RangeDB.widthFactor, LH_RangeDB.heightFactor = 1, 1
         UpdateSize(); RestorePosition(); UpdateRange()
-    else print("MiniRange: /minirange unlock | lock | reset") end
+    else print("LH_Range: /lh_range unlock | lock | reset") end
 end

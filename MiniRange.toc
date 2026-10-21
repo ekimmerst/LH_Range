@@ -1,8 +1,0 @@
-## Interface: 16001
-## Title: MiniRange
-## Notes: Shaman target range bar matching MiniExpBar.
-## Author: MiniRange
-## Version: 1.1.0
-## SavedVariablesPerCharacter: MiniRangeDB
-
-MiniRange.lua
