@@ -8,7 +8,7 @@ local meleeBook
 local meleeStrikes = {}
 -- Instant targeted strikes, not next-swing modifiers such as Raptor Strike.
 local meleeSpellIDs = {
-    HUNTER = {2974, 1495}, WARRIOR = {1715, 7384}, ROGUE = {1752},
+    HUNTER = {2974, 1495}, WARRIOR = {772}, ROGUE = {1752},
     PALADIN = {35395}, SHAMAN = {73899}, DRUID = {22568, 33917},
     DEATHKNIGHT = {49998}, MONK = {100780}, DEMONHUNTER = {162794},
 }
@@ -33,6 +33,7 @@ local function RefreshSpells()
     spells.heal = SpellName(331)
     spells.attack = SpellName(6603)
     spells.sting = SpellName(1978)
+    spells.charge = SpellName(100)
     meleeStrikes = {}
     local _, class = UnitClass("player")
     local known = IsPlayerSpell or IsSpellKnown
@@ -184,6 +185,25 @@ local function HunterRange()
     if sting == false and near == false then return "Out of Range", .8, .12, .12 end
     return "Range unavailable", .45, .45, .45
 end
+local warriorZone
+local function WarriorRange()
+    -- Rend (melee) and Charge (normally 8-25 yards) leave a dead zone between them.
+    -- Only four states exist: Melee Range, In Range, Dead Zone, Out of Range.
+    local melee, approximate = MeleeRange()
+    if melee or (melee == nil and approximate) then warriorZone = "Melee Range"; return warriorZone, .45, .45, .45 end
+    local charge = InRange(spells.charge)
+    if charge == true then warriorZone = "In Range"; return warriorZone, .15, .7, .2 end
+    -- Charge rejects both "too close" and "too far"; item probes tell them apart.
+    local near = charge == false and WithinEightYards() or nil
+    if charge == false and near == nil and WithinStingMaximum() == false then near = false end
+    if charge == false and near == nil then
+        -- Probes unreadable: targets leave melee through the dead zone and leave Charge range outward.
+        near = warriorZone == "Melee Range" or warriorZone == "Dead Zone"
+    end
+    if near then warriorZone = "Dead Zone"; return warriorZone, .8, .12, .12 end
+    warriorZone = "Out of Range"
+    return warriorZone, .8, .12, .12
+end
 local function StandardWidth()
     local reference = LH_ExpBarFrame or Minimap
     return reference and reference:GetWidth() * reference:GetEffectiveScale() / bar:GetEffectiveScale() or 140
@@ -233,6 +253,7 @@ local function UpdateRange()
     if valid then
         -- Attackable targets use offensive checks even when also assistable.
         if class == "HUNTER" then text, r, g, b = HunterRange()
+        elseif class == "WARRIOR" then text, r, g, b = WarriorRange()
         elseif class ~= "SHAMAN" then
             local melee, approximate = MeleeRange()
             if melee == true then text, r, g, b = "Melee Range", .45, .45, .45
@@ -331,6 +352,7 @@ events:SetScript("OnEvent", function(_, event, name)
     elseif bar then
         if event == "SPELLS_CHANGED" or event == "PLAYER_ENTERING_WORLD" or event == "UNIT_PET"
             or event == "PET_BAR_UPDATE" then RefreshSpells() end
+        if event == "PLAYER_TARGET_CHANGED" then warriorZone = nil end
         UpdateSize()
         UpdateRange()
     end

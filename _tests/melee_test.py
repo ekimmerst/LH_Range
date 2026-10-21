@@ -23,7 +23,7 @@ local function verifyClasses()
   class=token;nativeResult=true;update()
   assert(LH_RangeFrame.visible and text()=='Melee Range',token)
   nativeResult=false;update()
-  local expected=token=='HUNTER' and 'Dead Zone' or token=='SHAMAN' and 'Out of Range' or 'Out of Melee Range'
+  local expected=(token=='HUNTER' and 'Dead Zone') or ((token=='SHAMAN' or token=='WARRIOR') and 'Out of Range') or 'Out of Melee Range'
   assert(text()==expected,token..': '..tostring(text()))
  end
 end
@@ -56,12 +56,12 @@ playerRange=function(name) if name=='Spell6603' then return nativeResult end;ret
 verifyClasses()
 class='WARRIOR'
 C_Item.IsItemInRange=function() error('Melee must not query item range') end
-nativeResult=secret;update();assert(text()=='Range unavailable')
-nativeResult=nil;update();assert(text()=='Range unavailable')
-nativeResult=0;update();assert(text()=='Out of Melee Range')
+nativeResult=secret;update();assert(text()=='Out of Range')
+nativeResult=nil;update();assert(text()=='Out of Range')
+nativeResult=0;update();assert(text()=='Out of Range')
 nativeResult=1;update();assert(text()=='Melee Range')
 IsSpellInRange=function() error('Unavailable range API') end
-update();assert(text()=='Range unavailable')
+update();assert(text()=='Out of Range')
 ''')
 print('PASS: all-class melee, range-validated Attack action/player spellbooks and unavailable data')
 lua.execute('''
@@ -112,3 +112,34 @@ IsItemInRange=function() return secret end
 update();assert(text()=='Range unavailable')
 ''')
 print('PASS: level-11 Hunter, unconditional Attack/Raptor positives, all-class approximate fallback, learned Wing Clip and modern metadata')
+lua.execute('''
+-- Warrior: Rend = melee (<=5 yd), Charge = 8-25 yd, nothing in between = Dead Zone.
+C_Spell.SpellHasRange=nil;SpellHasRange=function(name) return name~='Spell6603' end
+class='WARRIOR';distance=20
+function IsPlayerSpell(id) return id==772 or id==100 end
+function IsSpellInRange(name)
+ if name=='Spell772' then return distance<=5 end
+ if name=='Spell100' then return distance>=8 and distance<=25 end
+end
+nearProbe=true
+function IsItemInRange(id)
+ if id==34368 then if nearProbe then return distance<=8 end return nil end
+ if id==33278 or id==29052 then return nil end
+ if id==18904 then return distance<=35 end
+ if id==8149 then return distance<=5 end
+end
+events.scripts.OnEvent(events,'SPELLS_CHANGED')
+for _,d in ipairs({1,5}) do distance=d;update();assert(text()=='Melee Range',d) end
+for _,d in ipairs({5.01,6,7.99}) do distance=d;update();assert(text()=='Dead Zone',d);color(.8,.12,.12) end
+for _,d in ipairs({8,15,25}) do distance=d;update();assert(text()=='In Range',d);color(.15,.7,.2) end
+for _,d in ipairs({25.01,40}) do distance=d;update();assert(text()=='Out of Range',d) end
+-- Without readable 8-yard probes: 35-yd probe proves far; otherwise the approach direction decides.
+nearProbe=false
+distance=40;update();assert(text()=='Out of Range')
+for _,d in ipairs({4,5.01,6,7.99}) do distance=d;update();assert(text()==(d<=5 and 'Melee Range' or 'Dead Zone'),d) end
+for _,d in ipairs({8,25}) do distance=d;update();assert(text()=='In Range',d) end
+distance=26;update();assert(text()=='Out of Range')
+distance=7;update();assert(text()=='Out of Range') -- 35-yd probe true, last zone Out of Range: stays outward.
+events.scripts.OnEvent(events,'PLAYER_TARGET_CHANGED')
+''')
+print('PASS: Warrior Rend melee, Charge range and Dead Zone')

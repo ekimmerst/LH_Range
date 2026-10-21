@@ -1,6 +1,6 @@
 # LH_Range
 
-Version: 1.3.2
+Version: 1.4.0
 
 A target range bar for every class in WoW Forever (Interface 16001), with additional spell-range zones for Shamans and Hunters. The addon uses the same bar style as LH_ExpBar and includes its own texture. LH_ExpBar is optional; when available, its bar supplies the default width, otherwise the minimap is used.
 
@@ -25,6 +25,17 @@ Melee checks first use learned instant targeted strikes: Wing Clip/Mongoose Bite
 When no reliable weapon-range check is available, the class-independent Classic five-yard item probe (8149) supplies an approximation. A positive result shows gray **Melee Range**, as requested; this fallback still estimates proximity rather than proving that the equipped weapon can hit. A negative result excludes melee; Hunters can then identify the red dead zone using Serpent Sting and the near-range probes. This supports low-level characters, including a level-11 Hunter who has learned neither Wing Clip nor Mongoose Bite, and classes without a suitable instant strike. Exact melee reach cannot be established for those characters through these APIs. Missing or restricted probes show Range unavailable.
 
 Classes other than Shamans and Hunters show gray Melee Range, red Out of Melee Range, or gray Range unavailable. Shamans and Hunters retain their additional spell-range zones.
+
+## Warrior range display
+
+| Condition | Display | Color |
+| --- | --- | --- |
+| Rend in range (melee) | Melee Range | Gray |
+| Charge in range (normally 8-25 yards) | In Range | Green |
+| Neither, but an eight-yard probe confirms the target is closer than 8 yards | Dead Zone | Red |
+| Eight-yard probes unreadable | Dead Zone if the target came from melee or the dead zone, otherwise Out of Range | Red |
+
+Rend and Charge use the client's spell range, independent of stance, rage and cooldowns. Without Charge learned, only melee is shown (Out of Melee Range otherwise). Without Rend, the generic melee fallbacks apply.
 
 ## Hunter range display
 
@@ -77,6 +88,10 @@ To retain your settings, close WoW and back up each character's `WTF/Account/<ac
 Native rendering and real range probes require in-game checks after a full restart, particularly large NPC melee reach, the eight-yard boundary, pets with different learned Charge ranks and independently moving pets.
 
 ## Changelog
+
+### 1.4.0 - 2026-10-21
+
+- Added Warrior support: Rend for Melee Range, Charge for In Range, plus Dead Zone detection between them using the eight-yard item probes (35-yard probe as far-range fallback). Hamstring/Overpower are no longer used for melee checks.
 
 ### 1.3.2 - 2026-10-21
 
