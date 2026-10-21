@@ -4,7 +4,8 @@ Reichweitenbalken für WoW Forever (Interface 16001), zunächst für Schamanen.
 Eigenständiges AddOn mit dem Balkenstil von MiniExpBar.
 
 - Melee Range: grau, höchste Priorität.
-- Flame Shock: grün, sobald in Reichweite.
+- Earth Shock: gelb, sobald in Reichweite, mit Vorrang vor Flame Shock.
+- Flame Shock: gelb, sobald in Reichweite.
 - Lightning Bolt: grün, wenn nur dieser Zauber in Reichweite ist.
 - Out of Range: rot.
 

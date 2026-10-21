@@ -28,14 +28,28 @@ function update() events.scripts.OnUpdate(events, 0.11) end
 function text()
  for _, f in ipairs(frames) do if f.kind == 'Font' and f.text then return f.text end end
 end
+function color(r, g, b)
+ for _, f in ipairs(frames) do
+  if f.kind == 'StatusBar' then
+   assert(f.color[1] == r and f.color[2] == g and f.color[3] == b)
+   return
+  end
+ end
+ error('Missing range fill')
+end
 assert(MiniRangeFrame.visible and text() == 'Out of Range')
 targetSelf = true; update(); assert(not MiniRangeFrame.visible)
 SlashCmdList.MINIRANGE('unlock'); assert(not MiniRangeFrame.visible)
 targetSelf = false; update(); assert(MiniRangeFrame.visible)
 SlashCmdList.MINIRANGE('lock')
 ranges.Spell403 = 1; update(); assert(text() == 'Spell403')
+color(0.15, 0.7, 0.2)
 ranges.Spell8050 = 1; update(); assert(text() == 'Spell8050')
+color(1, 0.82, 0)
+ranges.Spell8042 = 1; update(); assert(text() == 'Spell8042')
+color(1, 0.82, 0)
 melee = 1; update(); assert(text() == 'Melee Range')
+ranges.Spell8042 = 0
 targetFriendly = true; ranges.Spell331 = 1
 update(); assert(MiniRangeFrame.visible and text() == 'Melee Range')
 melee = 0; update(); assert(text() == 'Spell8050')
@@ -43,6 +57,7 @@ ranges.Spell8050 = 0; update(); assert(text() == 'Spell403')
 ranges.Spell403 = 0; update(); assert(text() == 'Out of Range')
 targetAttackable = false; targetFriendly = true
 ranges.Spell331 = 1; update(); assert(text() == 'Spell331')
+color(0.15, 0.7, 0.2)
 ranges.Spell331 = 0; update(); assert(text() == 'Out of Range')
 targetDead = true; update(); assert(not MiniRangeFrame.visible)
 targetDead = false; targetFriendly = false

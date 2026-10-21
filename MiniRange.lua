@@ -7,6 +7,7 @@ local function SpellName(id)
 end
 local function RefreshSpells()
     spells.bolt = SpellName(403)
+    spells.earthShock = SpellName(8042)
     spells.shock = SpellName(8050)
     spells.heal = SpellName(331)
     spells.attack = SpellName(6603)
@@ -83,7 +84,8 @@ local function UpdateRange()
         if friendly and not attackable then
             if InRange(spells.heal) then text, r, g, b = spells.heal, 0.15, 0.7, 0.2 end
         elseif MeleeRange() then text, r, g, b = "Melee Range", 0.45, 0.45, 0.45
-        elseif InRange(spells.shock) then text, r, g, b = spells.shock, 0.15, 0.7, 0.2
+        elseif InRange(spells.earthShock) then text, r, g, b = spells.earthShock, 1, 0.82, 0
+        elseif InRange(spells.shock) then text, r, g, b = spells.shock, 1, 0.82, 0
         elseif InRange(spells.bolt) then text, r, g, b = spells.bolt, 0.15, 0.7, 0.2 end
     else text, r, g, b = "MiniRange", 0.45, 0.45, 0.45 end
     label:SetText(text)
