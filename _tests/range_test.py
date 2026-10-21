@@ -9,7 +9,8 @@ except ImportError:
 exec(support.read_text().split('lua.execute((pathlib.Path(__file__)')[0])
 lua.execute('''
 function UnitClass() return 'Shaman', class or 'SHAMAN' end
-function IsSpellInRange(name) return ranges[name] end
+function IsSpellInRange(name) if name=='Spell6603' then return melee end;return ranges[name] end
+function SpellHasRange(name) return name=='Spell6603' end
 function IsItemInRange() return melee end
 function UnitCanAssist() return targetFriendly end
 function UnitIsUnit() return targetSelf end
@@ -39,7 +40,10 @@ function color(r, g, b)
 end
 assert(LH_RangeFrame.visible and text() == 'Out of Range')
 targetSelf = true; update(); assert(not LH_RangeFrame.visible)
-SlashCmdList.LH_RANGE('unlock'); assert(not LH_RangeFrame.visible)
+SlashCmdList.LH_RANGE('unlock'); assert(LH_RangeFrame.visible and text() == 'LH_Range')
+assert(LH_RangeResizeHandle.visible and LH_RangeFrame.mouse)
+SlashCmdList.LH_RANGE('lock'); assert(not LH_RangeFrame.visible)
+SlashCmdList.LH_RANGE('unlock'); assert(LH_RangeFrame.visible)
 targetSelf = false; update(); assert(LH_RangeFrame.visible)
 SlashCmdList.LH_RANGE('lock')
 ranges.Spell403 = 1; update(); assert(text() == 'Spell403')
@@ -73,7 +77,7 @@ cursorX, cursorY = 40, -10; update()
 assert(LH_RangeDB.widthFactor > 1 and LH_RangeDB.heightFactor == 1.5)
 SlashCmdList.LH_RANGE('lock')
 assert(not LH_RangeFrame.mouse and not LH_RangeResizeHandle.visible)
-targetExists = true; class = 'MAGE'; update(); assert(not LH_RangeFrame.visible)
+targetExists = true; class = 'MAGE'; update(); assert(LH_RangeFrame.visible and text() == 'Out of Melee Range')
 SlashCmdList.LH_RANGE('reset')
 assert(LH_RangeDB.widthFactor == 1 and LH_RangeDB.heightFactor == 1)
 ''')

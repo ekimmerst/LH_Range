@@ -1,9 +1,13 @@
 ## Interface: 16001
 ## Dependencies: LH_Tweaks
-## Title: LH_Range
-## Notes: Shaman target range bar matching LH_ExpBar.
+## Title: LH Range
+## Group: LH_Tweaks
+## X-Part-Of: LH_Tweaks
+## IconTexture: Interface\AddOns\LH_Range\Media\Icon
+## Notes: Melee range for all classes, with Shaman and Hunter spell-range zones.
 ## Author: LH_Range
-## Version: 1.1.1
+## Version: 1.3.2
 ## SavedVariablesPerCharacter: LH_RangeDB
 
 LH_Range.lua
+Settings.lua
