@@ -1,11 +1,13 @@
 local addonName = ...
 local Addon = LH_Range
 local variables = {}
+local spellPanels = {}
 function Addon:RefreshSettings()
     if self.notifying or not Settings or not Settings.NotifyUpdate then return end
     self.notifying = true
     for _, variable in ipairs(variables) do Settings.NotifyUpdate(variable) end
     self.notifying = false
+    for _, panel in ipairs(spellPanels) do panel:RefreshSpells() end
 end
 local function Proxy(category, key, kind, label, default, get, set)
     local variable = "LH_Range_" .. key
@@ -16,12 +18,64 @@ local function Defaults()
     SlashCmdList.LH_RANGE("lock")
     SlashCmdList.LH_RANGE("reset")
 end
+
+LHRangeSpellPanelMixin = {}
+function LHRangeSpellPanelMixin:OnLoad()
+    spellPanels[#spellPanels + 1] = self
+    self.fields = {}
+    local note = self:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    note:SetPoint("TOPLEFT", 8, -4)
+    note:SetWidth(440)
+    note:SetJustifyH("LEFT")
+    note:SetText("Enter localized ability names or spell IDs. Press Enter or leave a field to save; leave melee empty for automatic detection.")
+    self.note = note
+    for index, row in ipairs({{"melee", "Melee"}, {8, "8 yards"}, {10, "10 yards"}, {20, "20 yards"}, {30, "30 yards"}, {40, "40 yards"}}) do
+        local key = row[1]
+        local caption = self:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        caption:SetPoint("TOPLEFT", 12, -49 - (index - 1) * 33)
+        caption:SetText(row[2])
+        local field = CreateFrame("EditBox", nil, self, "InputBoxTemplate")
+        field:SetSize(240, 24)
+        field:SetPoint("TOPLEFT", 180, -43 - (index - 1) * 33)
+        field:SetAutoFocus(false)
+        field:SetMaxLetters(120)
+        field:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
+        field:SetScript("OnEscapePressed", function(box)
+            box:SetText(Addon:GetClassSpell(key))
+            box:ClearFocus()
+        end)
+        field:SetScript("OnEditFocusLost", function(box)
+            Addon:SetClassSpell(key, box:GetText())
+            box:SetText(Addon:GetClassSpell(key))
+        end)
+        self.fields[key] = field
+    end
+end
+
+function LHRangeSpellPanelMixin:Init()
+    self:RefreshSpells()
+end
+
+function LHRangeSpellPanelMixin:OnShow()
+    self:RefreshSpells()
+end
+
+function LHRangeSpellPanelMixin:RefreshSpells()
+    if not self.fields then return end
+    for key, field in pairs(self.fields) do
+        if not field:HasFocus() then field:SetText(Addon:GetClassSpell(key)) end
+    end
+end
 local function Build(category, layout)
     Addon.category = category
     layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Target range"))
     local enabled = Proxy(category, "enabled", "boolean", "Enable the range bar", true,
         function() return Addon:GetOption("enabled") end, function(v) Addon:SetEnabled(v) end)
-    Settings.CreateCheckbox(category, enabled, "Show melee range for every class, plus spell-range zones for Shamans and Hunters. Disabling hides the bar immediately. Saved per character.")
+    Settings.CreateCheckbox(category, enabled, "Show melee range and configured spell distances for your class. Disabling hides the bar immediately. Saved per character.")
+    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Class spells"))
+    layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for current class"}))
+    layout:AddInitializer(CreateSettingsButtonInitializer("Use built-in class behavior", "Clear spells", function() Addon:ClearClassSpells() end,
+        "Remove custom spells for this class and use the built-in range checks.", true))
     layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Position and size"))
     local unlock = Proxy(category, "unlocked", "boolean", "Unlock and preview the range bar", false,
         function() return not Addon:GetOption("locked") end,

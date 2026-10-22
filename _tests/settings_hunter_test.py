@@ -92,6 +92,7 @@ end
 function Settings.CreateCheckbox(c,s,t) c.layout:AddInitializer({setting=s}) end
 function Settings.CreateSliderOptions() return {SetLabelFormatter=function() end} end
 function Settings.CreateSlider(c,s,o,t) c.layout:AddInitializer({setting=s}) end
+function Settings.CreatePanelInitializer(template,data) return {template=template,data=data} end
 function Settings.NotifyUpdate(v) notices[v]=(notices[v] or 0)+1 end
 function Settings.OpenToCategory(id) opened=id end
 function CreateSettingsListSectionHeaderInitializer(t) return {header=t} end

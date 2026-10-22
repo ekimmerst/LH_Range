@@ -4,10 +4,12 @@
 ## Group: LH_Tweaks
 ## X-Part-Of: LH_Tweaks
 ## IconTexture: Interface\AddOns\LH_Range\Media\Icon
-## Notes: Melee range for all classes, with Shaman and Hunter spell-range zones.
+## Notes: Class-wide configurable spell-range zones and melee range.
 ## Author: LH_Range
-## Version: 1.4.0
+## Version: 1.5.0
+## SavedVariables: LH_RangeClassDB
 ## SavedVariablesPerCharacter: LH_RangeDB
 
 LH_Range.lua
 Settings.lua
+Settings.xml

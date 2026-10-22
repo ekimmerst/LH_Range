@@ -1,6 +1,6 @@
 <h1 style="color: #d9a94b;">LH Range</h1>
 
-<p>See melee range on a compact, movable target bar, plus spell-range zones for Shamans and Hunters.</p>
+<p>See melee range and configurable spell-range zones on a compact, movable target bar.</p>
 
 <p>A compact range bar for the target you are fighting. LH Range puts a quick distance cue on screen without turning your UI into a collection of separate range windows.</p>
 
@@ -8,13 +8,15 @@
 
 <ul>
   <li>Melee range for every class.</li>
-  <li>Additional spell-range zones for Shamans and Hunters.</li>
+  <li>Built-in spell-range zones for Shamans, Hunters and Warriors; configurable spells for every class.</li>
   <li>A movable, resizable bar that can match the width of LH ExpBar or the minimap.</li>
 </ul>
 
 <h2 style="color: #c78be6;">Position and size</h2>
 
 <p>Open <strong>Options → AddOns → LH Tweaks → LH Range</strong>. Turn the bar on, unlock its preview and drag it where it is useful. The small handle below its right edge changes its size; sliders and a layout reset are available too. Lock it when you're done.</p>
+
+<p>Under <strong>Class spells</strong>, enter localized ability names directly for melee and the 8, 10, 20, 30 and 40 yard tiers. Press Enter or leave a field to save it. The tier labels are approximate; the game checks each ability's actual range. The first usable tier in range is shown, while an empty melee field uses automatic detection. Editing a field replaces the built-in class checks. <strong>Clear spells</strong> returns to built-in behavior. These choices are shared by every character of the same class on your account; bar visibility and layout remain per character.</p>
 
 <h2 style="color: #73c9c4;">More LH addons</h2>
 

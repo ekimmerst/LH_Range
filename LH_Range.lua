@@ -14,6 +14,13 @@ local meleeSpellIDs = {
 }
 local maximumProbeRequested = false
 local meleeProbeRequested = false
+local distanceSlots = {8, 10, 20, 30, 40}
+local defaultClassSpells = {
+    HUNTER = {[30] = 1978},
+    WARRIOR = {[20] = 100},
+    SHAMAN = {[20] = 8042, [30] = 8050, [40] = 403},
+}
+local currentClass
 local function Public(value) return not (issecretvalue and issecretvalue(value)) end
 local function RangeResult(query, ...)
     if type(query) ~= "function" then return nil end
@@ -102,6 +109,21 @@ local function InRange(name)
     if not query then return nil end
     return RangeResult(query, name, "target")
 end
+
+local function ClassSpells()
+    local classes = type(LH_RangeClassDB) == "table" and LH_RangeClassDB
+    return classes and type(classes[currentClass]) == "table" and classes[currentClass] or nil
+end
+
+local function ConfiguredSpell(id)
+    if type(id) == "string" then
+        return id ~= "" and id or nil
+    end
+    if type(id) ~= "number" or id < 1 or id % 1 ~= 0 then return nil end
+    local known = IsPlayerSpell or IsSpellKnown
+    if known and RangeResult(known, id) ~= true then return nil end
+    return SpellName(id)
+end
 local function ApproximateMelee()
     local query = IsItemInRange or (C_Item and C_Item.IsItemInRange)
     local near = RangeResult(query, 8149, "target")
@@ -110,6 +132,14 @@ local function ApproximateMelee()
     if near == true then return nil, true end
 end
 local function MeleeRange()
+    local config = ClassSpells()
+    if config and config.melee then
+        local name = ConfiguredSpell(config.melee)
+        if name then
+            local result = InRange(name)
+            if result ~= nil then return result end
+        end
+    end
     for _, name in ipairs(meleeStrikes) do
         local strike = InRange(name)
         if strike ~= nil then return strike end
@@ -143,7 +173,40 @@ local function MeleeRange()
     if attack ~= nil then return attack end
     return ApproximateMelee()
 end
-local function WithinEightYards()
+
+local WithinEightYards, WithinStingMaximum, PetChargeInRange
+local function ConfiguredRange()
+    local config = ClassSpells()
+    if not config or not config.custom then return nil end
+    local melee, approximate = MeleeRange()
+    if melee == true or (melee == nil and approximate) then
+        return "Melee Range", .45, .45, .45
+    end
+    local first, rejected = nil, false
+    for _, yards in ipairs(distanceSlots) do
+        local name = ConfiguredSpell(config[yards])
+        if name then
+            local result = InRange(name)
+            if result == true and not first then first = name end
+            if result == false then rejected = true end
+        end
+    end
+    local near
+    if rejected and not first then
+        near = WithinEightYards()
+        if near == true then return "Dead Zone", .8, .12, .12 end
+    end
+    if currentClass == "HUNTER" and PetChargeInRange() == true then
+        return petCharge.name, 1, .82, 0
+    end
+    if first then return first, .15, .7, .2 end
+    if near == false then return "Out of Range", .8, .12, .12 end
+    if rejected and WithinStingMaximum() == false then return "Out of Range", .8, .12, .12 end
+    if rejected then return "Range unavailable", .45, .45, .45 end
+    if melee == false then return "Out of Melee Range", .8, .12, .12 end
+    return "Range unavailable", .45, .45, .45
+end
+function WithinEightYards()
     local query = IsItemInRange or (C_Item and C_Item.IsItemInRange)
     -- Eight-yard probes listed by LibRangeCheck; no library dependency.
     for _, id in ipairs({34368, 33278, 29052}) do
@@ -151,13 +214,13 @@ local function WithinEightYards()
         if result ~= nil then return result end
     end
 end
-local function WithinStingMaximum()
+function WithinStingMaximum()
     local query = IsItemInRange or (C_Item and C_Item.IsItemInRange)
     -- Zorbin's Ultra-Shrinker is a Classic-era 35-yard probe. Unlike the
     -- eight-yard items above, it does not require later-expansion item data.
     return RangeResult(query, 18904, "target")
 end
-local function PetChargeInRange()
+function PetChargeInRange()
     if not petCharge or RangeResult(UnitExists, "pet") ~= true
         or RangeResult(UnitIsDeadOrGhost, "pet") ~= false then return nil end
     if petCharge.modern and C_SpellBook and C_SpellBook.IsSpellBookItemInRange then
@@ -244,6 +307,7 @@ local function UpdateRange()
     if not LH_RangeDB.enabled then bar:Hide(); return end
     local selfTarget = UnitIsUnit("player", "target")
     local _, class = UnitClass("player")
+    currentClass = class
     local attackable = UnitCanAttack("player", "target")
     local friendly = UnitCanAssist("player", "target")
     local valid = not selfTarget and UnitExists("target")
@@ -252,7 +316,9 @@ local function UpdateRange()
     local text, r, g, b = "Out of Range", 0.8, 0.12, 0.12
     if valid then
         -- Attackable targets use offensive checks even when also assistable.
-        if class == "HUNTER" then text, r, g, b = HunterRange()
+        local config = ClassSpells()
+        if config and config.custom and attackable then text, r, g, b = ConfiguredRange()
+        elseif class == "HUNTER" then text, r, g, b = HunterRange()
         elseif class == "WARRIOR" then text, r, g, b = WarriorRange()
         elseif class ~= "SHAMAN" then
             local melee, approximate = MeleeRange()
@@ -285,6 +351,8 @@ local function SetLocked(locked)
 end
 local function Initialize()
     LH_RangeDB = type(LH_RangeDB) == "table" and LH_RangeDB or {}
+    LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
+    currentClass = select(2, UnitClass("player"))
     if type(LH_RangeDB.enabled) ~= "boolean" then LH_RangeDB.enabled = true end
     if LH_RangeDB.locked == nil then LH_RangeDB.locked = true end
     for _, key in ipairs({"widthFactor", "heightFactor"}) do
@@ -391,6 +459,73 @@ function Addon:SetSizeFactor(key, value)
     FinishResize()
     LH_RangeDB[key] = math.max(.5, math.min(2, value))
     UpdateSize()
+    if self.RefreshSettings then self:RefreshSettings() end
+end
+
+function Addon:GetClassSpells()
+    local _, class = UnitClass("player")
+    local saved = type(LH_RangeClassDB) == "table" and LH_RangeClassDB[class]
+    local copy = {}
+    if type(saved) == "table" then
+        copy.custom = saved.custom == true
+        copy.melee = saved.melee
+        for _, yards in ipairs(distanceSlots) do copy[yards] = saved[yards] end
+    end
+    return copy
+end
+
+function Addon:GetClassSpell(key)
+    local values = self:GetClassSpells()
+    local _, class = UnitClass("player")
+    local value = values.custom and values[key] or (defaultClassSpells[class] or {})[key]
+    if type(value) == "number" then return SpellName(value) or tostring(value) end
+    return value or ""
+end
+
+function Addon:SetClassSpell(key, value)
+    if key ~= "melee" and key ~= 8 and key ~= 10 and key ~= 20 and key ~= 30 and key ~= 40 then return false end
+    if type(value) ~= "string" then return false end
+    value = value:match("^%s*(.-)%s*$")
+    local _, class = UnitClass("player")
+    if not class then return false end
+    local saved = self:GetClassSpells()
+    if not saved.custom then
+        for defaultKey, id in pairs(defaultClassSpells[class] or {}) do saved[defaultKey] = id end
+    end
+    saved[key] = value ~= "" and (tonumber(value) or value) or nil
+    saved.custom = true
+    LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
+    LH_RangeClassDB[class] = saved
+    currentClass = class
+    UpdateRange()
+    return true
+end
+
+function Addon:SetClassSpells(values)
+    if type(values) ~= "table" then return false end
+    local copy = {custom = true}
+    for _, key in ipairs({"melee", 8, 10, 20, 30, 40}) do
+        local value = values[key]
+        if value ~= nil and value ~= "" then
+            if type(value) == "string" then value = value:match("^%s*(.-)%s*$") end
+            if type(value) ~= "string" and type(value) ~= "number" then return false end
+            if type(value) == "number" and (value < 1 or value % 1 ~= 0) then return false end
+            if value ~= "" then copy[key] = tonumber(value) or value end
+        end
+    end
+    local _, class = UnitClass("player")
+    if not class then return false end
+    LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
+    LH_RangeClassDB[class] = copy
+    currentClass = class
+    UpdateRange()
+    return true
+end
+
+function Addon:ClearClassSpells()
+    local _, class = UnitClass("player")
+    if type(LH_RangeClassDB) == "table" then LH_RangeClassDB[class] = nil end
+    UpdateRange()
     if self.RefreshSettings then self:RefreshSettings() end
 end
 SlashCmdList.LH_RANGE = function(message)

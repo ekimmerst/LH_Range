@@ -1,0 +1,9 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Frame name="LHRangeSpellPanelTemplate" mixin="LHRangeSpellPanelMixin" virtual="true">
+        <Size x="460" y="247"/>
+        <Scripts>
+            <OnLoad method="OnLoad"/>
+            <OnShow method="OnShow"/>
+        </Scripts>
+    </Frame>
+</Ui>
