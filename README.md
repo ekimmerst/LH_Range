@@ -1,5 +1,7 @@
 <h1 style="color: #d9a94b;">LH Range</h1>
 
+<p>See melee range on a compact, movable target bar, plus spell-range zones for Shamans and Hunters.</p>
+
 <p>A compact range bar for the target you are fighting. LH Range puts a quick distance cue on screen without turning your UI into a collection of separate range windows.</p>
 
 <h2 style="color: #73c9c4;">What it shows</h2>
