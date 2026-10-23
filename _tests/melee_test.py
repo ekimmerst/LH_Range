@@ -109,7 +109,8 @@ C_Spell.SpellHasRange=function(name) return name~='Spell6603' end
 events.scripts.OnEvent(events,'SPELLS_CHANGED')
 distance=6;update();assert(text()=='Dead Zone')
 IsItemInRange=function() return secret end
-update();assert(text()=='Range unavailable')
+update();assert(text()=='Out of Range')
+color(.8,.12,.12)
 ''')
 print('PASS: level-11 Hunter, unconditional Attack/Raptor positives, all-class approximate fallback, learned Wing Clip and modern metadata')
 lua.execute('''

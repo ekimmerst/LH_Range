@@ -202,9 +202,9 @@ local function ConfiguredRange()
     if first then return first, .15, .7, .2 end
     if near == false then return "Out of Range", .8, .12, .12 end
     if rejected and WithinStingMaximum() == false then return "Out of Range", .8, .12, .12 end
-    if rejected then return "Range unavailable", .45, .45, .45 end
+    if rejected then return "Out of Range", .8, .12, .12 end
     if melee == false then return "Out of Melee Range", .8, .12, .12 end
-    return "Range unavailable", .45, .45, .45
+    return "Out of Range", .8, .12, .12
 end
 function WithinEightYards()
     local query = IsItemInRange or (C_Item and C_Item.IsItemInRange)
@@ -246,7 +246,7 @@ local function HunterRange()
     if PetChargeInRange() == true then return petCharge.name, 1, .82, 0 end
     if sting == true then return "In Range", .15, .7, .2 end
     if sting == false and near == false then return "Out of Range", .8, .12, .12 end
-    return "Range unavailable", .45, .45, .45
+    return "Out of Range", .8, .12, .12
 end
 local warriorZone
 local function WarriorRange()
@@ -325,7 +325,7 @@ local function UpdateRange()
             if melee == true then text, r, g, b = "Melee Range", .45, .45, .45
             elseif melee == false then text, r, g, b = "Out of Melee Range", .8, .12, .12
             elseif approximate then text, r, g, b = "Melee Range", .45, .45, .45
-            else text, r, g, b = "Range unavailable", .45, .45, .45 end
+            else text, r, g, b = "Out of Range", .8, .12, .12 end
         elseif friendly and not attackable then
             if InRange(spells.heal) then text, r, g, b = spells.heal, 0.15, 0.7, 0.2 end
         else

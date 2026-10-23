@@ -58,14 +58,14 @@ IsSpellInRange=nil
 C_Spell={GetSpellName=GetSpellInfo,IsSpellInRange=function(name,unit) assert(unit=='target');return playerRange(name) end}
 events.scripts.OnEvent(events,'PET_BAR_UPDATE');assert(text()=='Spell7371')
 petDistance=30;update();assert(text()=='In Range')
-hiddenRange=true;update();assert(text()=='Range unavailable')
+hiddenRange=true;update();assert(text()=='Out of Range');color(.8,.12,.12)
 hiddenRange=false;distance=6;missingEight=true;update();assert(text()=='Dead Zone');color(.8,.12,.12)
 -- Missing later-expansion items must not block Classic dead-zone detection.
 for _,d in ipairs({5.01,6,7.99}) do distance=d;update();assert(text()=='Dead Zone') end
 distance=8;update();assert(text()=='In Range')
 distance=35;update();assert(text()=='In Range')
 distance=35.01;update();assert(text()=='Out of Range')
-distance=6;missingMaximum=true;update();assert(text()=='Range unavailable')
+distance=6;missingMaximum=true;update();assert(text()=='Out of Range');color(.8,.12,.12)
 missingMaximum=false;missingEight=false;update();assert(text()=='Dead Zone')
 -- Modern item API, cache request and restricted/error fallback.
 local itemQuery=IsItemInRange
@@ -74,9 +74,9 @@ C_Item={IsItemInRange=itemQuery,RequestLoadItemDataByID=function(id) assert(id==
 events.scripts.OnEvent(events,'SPELLS_CHANGED');events.scripts.OnEvent(events,'SPELLS_CHANGED')
 assert(requests==2);update();assert(text()=='Dead Zone')
 C_Item.IsItemInRange=function(id,unit) if id==18904 then return secret end;return itemQuery(id,unit) end
-update();assert(text()=='Range unavailable')
+update();assert(text()=='Out of Range');color(.8,.12,.12)
 C_Item.IsItemInRange=function(id,unit) if id==18904 then error('Unavailable item') end;return itemQuery(id,unit) end
-update();assert(text()=='Range unavailable')
+update();assert(text()=='Out of Range');color(.8,.12,.12)
 C_Item.IsItemInRange=itemQuery;missingEight=false
 targetAttackable=false;targetFriendly=true;SlashCmdList.LH_RANGE('lock');assert(not LH_RangeFrame.visible)
 targetAttackable=true;targetFriendly=false;distance=20
