@@ -51,5 +51,13 @@
 
 <p><strong>LH Tweaks is required</strong> and must be installed alongside LH Range. LH ExpBar is optional. This began as a simple range cue for my own characters; please tell me in the CurseForge comments if a class ability or range zone needs attention.</p>
 
+<h2 style="color: #73c9c4;">Changelog</h2>
+
+<p><strong>1.5.1 - Forever</strong></p>
+
+<ul>
+  <li>In melee range, Warriors, Rogues and Druids can see their current Rage or Energy in place of the range label when that resource is active.</li>
+</ul>
+
 <hr>
-<p><sup>*</sup> Implemented with the help of Codex and GPT-6-SOL and tested by me as thoroughly as I could in the WoW beta client. Some class or race combinations may still need work; please report anything you notice.</p>
+<p><sup>*</sup> Implemented with the help of Codex and GPT-6-SOL. Some class or race combinations may still need work; please report anything you notice.</p>
