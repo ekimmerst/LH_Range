@@ -1,7 +1,7 @@
 local ADDON_NAME = ...
 local Addon = {}
 LH_Range = Addon
-local bar, fill, label, handle, resizing
+local bar, fill, label, cooldownLabel, cooldownBinding, handle, resizing
 local spells = {}
 local petCharge
 local meleeBook
@@ -204,7 +204,7 @@ local function ConfiguredRange()
     if currentClass == "HUNTER" and PetChargeInRange() == true then
         return petCharge.name, 1, .82, 0
     end
-    if first then return first, .15, .7, .2 end
+    if first then return first, .15, .7, .2, first end
     if near == false then return "Out of Range", .8, .12, .12 end
     if rejected and WithinStingMaximum() == false then return "Out of Range", .8, .12, .12 end
     if rejected then return "Out of Range", .8, .12, .12 end
@@ -249,7 +249,7 @@ local function HunterRange()
     end
     if approximate and sting ~= true and near ~= false then return "Melee Range", .45, .45, .45 end
     if PetChargeInRange() == true then return petCharge.name, 1, .82, 0 end
-    if sting == true then return "In Range", .15, .7, .2 end
+    if sting == true then return "In Range", .15, .7, .2, spells.sting end
     if sting == false and near == false then return "Out of Range", .8, .12, .12 end
     return "Out of Range", .8, .12, .12
 end
@@ -260,7 +260,7 @@ local function WarriorRange()
     local melee, approximate = MeleeRange()
     if melee or (melee == nil and approximate) then warriorZone = "Melee Range"; return warriorZone, .45, .45, .45 end
     local charge = InRange(spells.charge)
-    if charge == true then warriorZone = "In Range"; return warriorZone, .15, .7, .2 end
+    if charge == true then warriorZone = "In Range"; return warriorZone, .15, .7, .2, spells.charge end
     -- Charge rejects both "too close" and "too far"; item probes tell them apart.
     local near = charge == false and WithinEightYards() or nil
     if charge == false and near == nil and WithinStingMaximum() == false then near = false end
@@ -319,6 +319,48 @@ local function MeleePower(class)
     return math.max(0, math.min(value, maximum)), maximum
 end
 
+local function UpdateCooldown(spell)
+    if cooldownBinding then cooldownBinding:SetEnabled(false) end
+    cooldownLabel:Hide()
+    label:ClearAllPoints()
+    label:SetPoint("CENTER")
+    if not spell then return end
+
+    local duration
+    if C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldownDuration then
+        local ok, info = pcall(C_Spell.GetSpellCooldown, spell)
+        if not ok or not info or not Public(info.isActive) or info.isActive ~= true
+            or not Public(info.isOnGCD) or info.isOnGCD == true then return end
+        local durationOK
+        durationOK, duration = pcall(C_Spell.GetSpellCooldownDuration, spell, true)
+        if not durationOK then return end
+        if duration and cooldownBinding then
+            cooldownBinding:SetDuration(duration)
+            cooldownBinding:SetEnabled(true)
+            cooldownLabel:Show()
+        elseif duration and duration.GetRemainingDuration then
+            local remainingOK, remaining = pcall(duration.GetRemainingDuration, duration)
+            if remainingOK and Public(remaining) and type(remaining) == "number" and remaining > 0 then
+                cooldownLabel:SetText(string.format("%.1fs", remaining))
+                cooldownLabel:Show()
+            end
+        end
+    elseif GetSpellCooldown then
+        local ok, start, seconds, enabled, rate = pcall(GetSpellCooldown, spell)
+        if not ok or not Public(start) or not Public(seconds) or not Public(enabled)
+            or type(start) ~= "number" or type(seconds) ~= "number" or enabled == 0 then return end
+        local remaining = start + seconds - GetTime()
+        if Public(rate) and type(rate) == "number" and rate > 0 then remaining = remaining / rate end
+        if remaining <= 0 or seconds <= 1.5 then return end
+        cooldownLabel:SetText(string.format("%.1fs", remaining))
+        cooldownLabel:Show()
+    end
+    if cooldownLabel:IsShown() then
+        label:ClearAllPoints()
+        label:SetPoint("RIGHT", fill, "CENTER", -3, 0)
+    end
+end
+
 local function UpdateRange()
     if not bar then return end
     if not LH_RangeDB.enabled then bar:Hide(); return end
@@ -331,13 +373,13 @@ local function UpdateRange()
         and (attackable or (class == "SHAMAN" and friendly))
         and UnitFlag(UnitIsDeadOrGhost, "target") == false
     if not valid and LH_RangeDB.locked then bar:Hide(); return end
-    local text, r, g, b = "Out of Range", 0.8, 0.12, 0.12
+    local text, r, g, b, cooldownSpell = "Out of Range", 0.8, 0.12, 0.12
     if valid then
         -- Attackable targets use offensive checks even when also assistable.
         local config = ClassSpells()
-        if config and config.custom and attackable then text, r, g, b = ConfiguredRange()
-        elseif class == "HUNTER" then text, r, g, b = HunterRange()
-        elseif class == "WARRIOR" then text, r, g, b = WarriorRange()
+        if config and config.custom and attackable then text, r, g, b, cooldownSpell = ConfiguredRange()
+        elseif class == "HUNTER" then text, r, g, b, cooldownSpell = HunterRange()
+        elseif class == "WARRIOR" then text, r, g, b, cooldownSpell = WarriorRange()
         elseif class ~= "SHAMAN" then
             local melee, approximate = MeleeRange()
             if melee == true then text, r, g, b = "Melee Range", .45, .45, .45
@@ -345,14 +387,14 @@ local function UpdateRange()
             elseif approximate then text, r, g, b = "Melee Range", .45, .45, .45
             else text, r, g, b = "Out of Range", .8, .12, .12 end
         elseif friendly and not attackable then
-            if InRange(spells.heal) then text, r, g, b = spells.heal, 0.15, 0.7, 0.2 end
+            if InRange(spells.heal) then text, r, g, b, cooldownSpell = spells.heal, 0.15, 0.7, 0.2, spells.heal end
         else
             local melee, approximate = MeleeRange()
             if melee then text, r, g, b = "Melee Range", .45, .45, .45
             elseif approximate then text, r, g, b = "Melee Range", .45, .45, .45
-            elseif InRange(spells.earthShock) then text, r, g, b = spells.earthShock, 1, .82, 0
-            elseif InRange(spells.shock) then text, r, g, b = spells.shock, 1, .82, 0
-            elseif InRange(spells.bolt) then text, r, g, b = spells.bolt, .15, .7, .2 end
+            elseif InRange(spells.earthShock) then text, r, g, b, cooldownSpell = spells.earthShock, 1, .82, 0, spells.earthShock
+            elseif InRange(spells.shock) then text, r, g, b, cooldownSpell = spells.shock, 1, .82, 0, spells.shock
+            elseif InRange(spells.bolt) then text, r, g, b, cooldownSpell = spells.bolt, .15, .7, .2, spells.bolt end
         end
     else text, r, g, b = "LH_Range", 0.45, 0.45, 0.45 end
     local power, maximum
@@ -367,6 +409,7 @@ local function UpdateRange()
         fill:SetValue(1)
         fill:SetStatusBarColor(r, g, b, 1)
     end
+    UpdateCooldown(power and nil or cooldownSpell)
     bar:Show()
 end
 local function SetLocked(locked)
@@ -409,6 +452,27 @@ local function Initialize()
     label:SetTextColor(1, 1, 1, 1)
     label:SetShadowColor(0, 0, 0, 1)
     label:SetShadowOffset(1, -1)
+    cooldownLabel = fill:CreateFontString(nil, "OVERLAY")
+    cooldownLabel:SetPoint("LEFT", fill, "CENTER", 3, 0)
+    cooldownLabel:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    cooldownLabel:SetTextColor(1, 1, 1, 1)
+    cooldownLabel:SetShadowColor(0, 0, 0, 1)
+    cooldownLabel:SetShadowOffset(1, -1)
+    cooldownLabel:Hide()
+    if C_DurationUtil and C_DurationUtil.CreateDurationTextBinding
+        and C_StringUtil and C_StringUtil.CreateSecondsFormatter then
+        local formatter = C_StringUtil.CreateSecondsFormatter()
+        if Enum and Enum.SecondsFormatterAbbreviation then
+            formatter:SetDefaultAbbreviation(Enum.SecondsFormatterAbbreviation.OneLetter)
+        end
+        cooldownBinding = C_DurationUtil.CreateDurationTextBinding()
+        cooldownBinding:SetFontString(cooldownLabel)
+        cooldownBinding:SetFormatter(formatter)
+        cooldownBinding:SetZeroDurationText("")
+        cooldownBinding:SetExpiredText("")
+        cooldownBinding:SetUpdateInterval(0.1)
+        cooldownBinding:SetEnabled(false)
+    end
     bar:SetScript("OnDragStart", function() if not LH_RangeDB.locked and not resizing then bar:StartMoving() end end)
     bar:SetScript("OnDragStop", StopMoving)
     handle = CreateFrame("Button", "LH_RangeResizeHandle", bar)

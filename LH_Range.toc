@@ -6,7 +6,7 @@
 ## IconTexture: Interface\AddOns\LH_Range\Media\Icon
 ## Notes: Class-wide configurable spell-range zones and melee range.
 ## Author: LH_Range
-## Version: 1.5.1
+## Version: 1.5.2
 ## SavedVariables: LH_RangeClassDB
 ## SavedVariablesPerCharacter: LH_RangeDB
 
