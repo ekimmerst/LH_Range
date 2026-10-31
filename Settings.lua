@@ -68,19 +68,11 @@ function LHRangeSpellPanelMixin:RefreshSpells()
 end
 local function Build(category, layout)
     Addon.category = category
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Target range"))
-    local enabled = Proxy(category, "enabled", "boolean", "Enable the range bar", true,
-        function() return Addon:GetOption("enabled") end, function(v) Addon:SetEnabled(v) end)
-    Settings.CreateCheckbox(category, enabled, "Show melee range and configured spell distances for your class. Disabling hides the bar immediately. Saved per character.")
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Class spells"))
-    layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for current class"}))
-    layout:AddInitializer(CreateSettingsButtonInitializer("Use built-in class behavior", "Clear spells", function() Addon:ClearClassSpells() end,
-        "Remove custom spells for this class and use the built-in range checks.", true))
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Position and size"))
-    local unlock = Proxy(category, "unlocked", "boolean", "Unlock and preview the range bar", false,
-        function() return not Addon:GetOption("locked") end,
-        function(v) SlashCmdList.LH_RANGE(v and "unlock" or "lock") end)
-    Settings.CreateCheckbox(category, unlock, "While enabled, left-drag the bar to move it; drag the circle below its right edge to resize. Lock to hide the circle. Saved per character.")
+    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Positioning"))
+    local lock = Proxy(category, "locked", "boolean", "Lock range bar", true,
+        function() return Addon:GetOption("locked") end,
+        function(v) SlashCmdList.LH_RANGE(v and "lock" or "unlock") end)
+    Settings.CreateCheckbox(category, lock, "Disable to preview and drag the bar, or resize it with the circle below its right edge. Enable to hide the circle and lock the bar. Saved per character.")
     for _, option in ipairs({{key="widthFactor",label="Bar width"},{key="heightFactor",label="Bar height"}}) do
         local key = option.key
         local setting = Proxy(category, key, "number", option.label, 100,
@@ -91,6 +83,14 @@ local function Build(category, layout)
     end
     layout:AddInitializer(CreateSettingsButtonInitializer("Restore the default size and position", "Reset layout",
         function() SlashCmdList.LH_RANGE("reset") end,"Restore default dimensions and the position below screen center. Keep activation and lock settings.",true))
+    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Target range"))
+    local enabled = Proxy(category, "enabled", "boolean", "Enable the range bar", true,
+        function() return Addon:GetOption("enabled") end, function(v) Addon:SetEnabled(v) end)
+    Settings.CreateCheckbox(category, enabled, "Show melee range and configured spell distances for your class. Disabling hides the bar immediately. Saved per character.")
+    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Class spells"))
+    layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for current class"}))
+    layout:AddInitializer(CreateSettingsButtonInitializer("Use built-in class behavior", "Clear spells", function() Addon:ClearClassSpells() end,
+        "Remove custom spells for this class and use the built-in range checks.", true))
     EventRegistry:RegisterCallback("Settings.CategoryDefaulted",function(_,selected) if selected==category then Defaults() end end,Addon)
     EventRegistry:RegisterCallback("Settings.Defaulted",Defaults,Addon)
 end

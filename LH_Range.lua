@@ -22,6 +22,11 @@ local defaultClassSpells = {
 }
 local currentClass
 local function Public(value) return not (issecretvalue and issecretvalue(value)) end
+local function UnitFlag(query, ...)
+    local ok, value = pcall(query, ...)
+    if not ok or not Public(value) then return nil end
+    return value == true
+end
 local function RangeResult(query, ...)
     if type(query) ~= "function" then return nil end
     local ok, result = pcall(query, ...)
@@ -317,13 +322,14 @@ end
 local function UpdateRange()
     if not bar then return end
     if not LH_RangeDB.enabled then bar:Hide(); return end
-    local selfTarget = UnitIsUnit("player", "target")
+    local selfTarget = UnitFlag(UnitIsUnit, "player", "target")
     local _, class = UnitClass("player")
     currentClass = class
-    local attackable = UnitCanAttack("player", "target")
-    local friendly = UnitCanAssist("player", "target")
-    local valid = not selfTarget and UnitExists("target")
-        and (attackable or (class == "SHAMAN" and friendly)) and not UnitIsDeadOrGhost("target")
+    local attackable = UnitFlag(UnitCanAttack, "player", "target")
+    local friendly = UnitFlag(UnitCanAssist, "player", "target")
+    local valid = not selfTarget and UnitFlag(UnitExists, "target") == true
+        and (attackable or (class == "SHAMAN" and friendly))
+        and UnitFlag(UnitIsDeadOrGhost, "target") == false
     if not valid and LH_RangeDB.locked then bar:Hide(); return end
     local text, r, g, b = "Out of Range", 0.8, 0.12, 0.12
     if valid then
