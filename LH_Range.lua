@@ -302,6 +302,18 @@ local function RestorePosition()
         bar:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
     end
 end
+local function MeleePower(class)
+    if class ~= "WARRIOR" and class ~= "ROGUE" and class ~= "DRUID" then return end
+    if not UnitPowerType or not UnitPower or not UnitPowerMax then return end
+    local okType, powerType = pcall(UnitPowerType, "player")
+    if not okType or not Public(powerType) or (powerType ~= 1 and powerType ~= 3) then return end
+    local okValue, value = pcall(UnitPower, "player", powerType)
+    local okMax, maximum = pcall(UnitPowerMax, "player", powerType)
+    if not okValue or not okMax or not Public(value) or not Public(maximum)
+        or type(value) ~= "number" or type(maximum) ~= "number" or maximum <= 0 then return end
+    return math.max(0, math.min(value, maximum)), maximum
+end
+
 local function UpdateRange()
     if not bar then return end
     if not LH_RangeDB.enabled then bar:Hide(); return end
@@ -337,8 +349,18 @@ local function UpdateRange()
             elseif InRange(spells.bolt) then text, r, g, b = spells.bolt, .15, .7, .2 end
         end
     else text, r, g, b = "LH_Range", 0.45, 0.45, 0.45 end
-    label:SetText(text)
-    fill:SetStatusBarColor(r, g, b, 1)
+    local power, maximum
+    if valid and text == "Melee Range" then power, maximum = MeleePower(class) end
+    if power then
+        label:SetText(string.format("%d/%d", power, maximum))
+        fill:SetValue(power / maximum)
+        if class == "ROGUE" then fill:SetStatusBarColor(1, .82, 0, 1)
+        else fill:SetStatusBarColor(.8, .12, .12, 1) end
+    else
+        label:SetText(text)
+        fill:SetValue(1)
+        fill:SetStatusBarColor(r, g, b, 1)
+    end
     bar:Show()
 end
 local function SetLocked(locked)
