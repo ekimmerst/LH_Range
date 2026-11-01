@@ -16,9 +16,20 @@ function UnitCanAssist() return targetFriendly end
 function UnitIsUnit() return targetSelf end
 targetSelf = false
 targetFriendly = false
+health = 100
+maximumHealth = 100
+function UnitHealth(unit) assert(unit == 'player'); return health end
+function UnitHealthMax(unit) assert(unit == 'player'); return maximumHealth end
 ranges = {}; melee = 0
 local m = getmetatable(UIParent).__index
 function m:SetShown(value) self.visible = value end
+function m:SetHeight(value) self.height = value end
+function m:SetBackdrop(value) self.backdrop = value end
+function m:SetPoint(...)
+ self.point = {...}
+ self.points = rawget(self, 'points') or {}
+ self.points[#self.points + 1] = self.point
+end
 ''')
 source = pathlib.Path(__file__).resolve().parents[1] / 'LH_Range.lua'
 lua.execute(source.read_text(), 'LH_Range')
@@ -39,6 +50,23 @@ function color(r, g, b)
  error('Missing range fill')
 end
 assert(LH_RangeFrame.visible and text() == 'Out of Range')
+assert(LH_RangeHealthFrame.parent == LH_RangeFrame and LH_RangeHealthBar.parent == LH_RangeHealthFrame)
+assert(LH_RangeHealthFrame.backdrop == LH_RangeFrame.backdrop)
+assert(LH_RangeHealthFrame.points[1][1] == 'BOTTOMLEFT' and LH_RangeHealthFrame.points[1][2] == LH_RangeFrame)
+assert(LH_RangeHealthFrame.points[2][1] == 'BOTTOMRIGHT' and LH_RangeHealthFrame.points[2][2] == LH_RangeFrame)
+assert(LH_RangeHealthBar.points[1][1] == 'TOPLEFT' and LH_RangeHealthBar.points[1][2] == 3)
+assert(LH_RangeHealthBar.points[2][1] == 'BOTTOMRIGHT' and LH_RangeHealthBar.points[2][2] == -3)
+assert(LH_RangeHealthBar.value == 100 and LH_RangeHealthFrame.height == 10 and LH_RangeHealthBar.color[2] == .7)
+health = 50; events.scripts.OnEvent(events, 'UNIT_HEALTH', 'player')
+assert(LH_RangeHealthBar.color[2] == .7)
+health = 49; events.scripts.OnEvent(events, 'UNIT_HEALTH', 'player')
+assert(LH_RangeHealthBar.value == 49 and LH_RangeHealthBar.color[1] == 1 and LH_RangeHealthBar.color[2] == .5)
+health = 25; events.scripts.OnEvent(events, 'UNIT_HEALTH', 'player')
+assert(LH_RangeHealthBar.color[2] == .5)
+health = 24; events.scripts.OnEvent(events, 'UNIT_HEALTH', 'player')
+assert(LH_RangeHealthBar.color[1] == .8 and LH_RangeHealthBar.color[2] == .12)
+health = 50; maximumHealth = 200; events.scripts.OnEvent(events, 'UNIT_MAXHEALTH', 'player')
+assert(LH_RangeHealthBar.maximum == 200 and LH_RangeHealthBar.color[2] == .5)
 targetSelf = true; update(); assert(not LH_RangeFrame.visible)
 SlashCmdList.LH_RANGE('unlock'); assert(LH_RangeFrame.visible and text() == 'LH_Range')
 assert(LH_RangeResizeHandle.visible and LH_RangeFrame.mouse)
@@ -75,10 +103,12 @@ mouseDown = true
 LH_RangeResizeHandle.scripts.OnMouseDown(nil, 'LeftButton')
 cursorX, cursorY = 40, -10; update()
 assert(LH_RangeDB.widthFactor > 1 and LH_RangeDB.heightFactor == 1.5)
+assert(LH_RangeHealthFrame.height == 15)
 SlashCmdList.LH_RANGE('lock')
 assert(not LH_RangeFrame.mouse and not LH_RangeResizeHandle.visible)
 targetExists = true; class = 'MAGE'; update(); assert(LH_RangeFrame.visible and text() == 'Out of Melee Range')
 SlashCmdList.LH_RANGE('reset')
 assert(LH_RangeDB.widthFactor == 1 and LH_RangeDB.heightFactor == 1)
+assert(LH_RangeHealthFrame.height == 10)
 ''')
 print('LH_Range: range priority, visibility, lock, resize and reset passed.')

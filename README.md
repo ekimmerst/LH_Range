@@ -6,6 +6,7 @@
 
 <ul>
   <li>Melee range for every class.</li>
+  <li>A text-free player health bar sits directly above the range bar at half its height. It is green from 50% health, orange from 25%, and red below 25%.</li>
   <li>In melee range, a live bar for the active non-Mana resource replaces the range label (for example Rage, Energy, Focus, Runic Power or Fury). The current value appears on the bar. Gained resource briefly glows green; spent resource glows red.</li>
   <li>Built-in spell-range zones for Shamans, Hunters and Warriors, plus configurable ability checks for every class.</li>
   <li>When the ability used for the current range cue is on cooldown, its remaining time appears in parentheses beside the centered range label. The bar dims during cooldown and flashes briefly when the ability becomes available.</li>
@@ -24,6 +25,8 @@
 <h2 style="color: #c78be6;">Position and size</h2>
 
 <p>Turn the bar on, unlock its preview and drag it where it is useful. The small handle below its right edge changes its size; sliders and a layout reset are available too. Lock it when you're done. Bar visibility, position and size are saved per character.</p>
+
+<p>The Target range settings also let you show or hide the player health bar and the resource bar that replaces the melee-range label. Both choices are saved per character.</p>
 
 <h2 style="color: #73c9c4;">More LH addons</h2>
 

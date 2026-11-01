@@ -116,7 +116,13 @@ LH_Tweaks.category={};LH_Tweaks:RegisterModulePage('LH_Range')
 assert(registered.parent==LH_Tweaks.category and registered.title=='LH Range')
 assert(registered.layout.rows[1].header=='Positioning')
 local enabled,lock,w,h=registry.LH_Range_enabled,registry.LH_Range_locked,registry.LH_Range_widthFactor,registry.LH_Range_heightFactor
+local health,power=registry.LH_Range_healthEnabled,registry.LH_Range_powerEnabled
 assert(lock.default and lock.get())
+assert(health.default and health.get() and power.default and power.get())
+health.set(false);assert(not health.get() and not LH_RangeHealthFrame.visible)
+health.set(true);assert(health.get() and LH_RangeHealthFrame.visible)
+power.set(false);assert(not power.get() and not LH_RangeDB.powerEnabled)
+power.set(true);assert(power.get() and LH_RangeDB.powerEnabled)
 enabled.set(false);assert(not LH_RangeFrame.visible)
 events.scripts.OnUpdate(events,.5);assert(not LH_RangeFrame.visible)
 enabled.set(true);assert(LH_RangeFrame.visible)
