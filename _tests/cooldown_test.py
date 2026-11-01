@@ -13,6 +13,7 @@ function IsItemInRange() return 0 end
 ranges = {Spell100 = 1}
 local methods = getmetatable(UIParent).__index
 function methods:IsShown() return self.visible end
+function methods:GetStringWidth() return #(rawget(self, 'text') or '') * 4 end
 C_Spell = {
  GetSpellName = function(id) return 'Spell' .. id end,
  GetSpellCooldown = function(spell)
@@ -46,10 +47,7 @@ local events = frames[#frames]
 events.scripts.OnEvent(events, 'ADDON_LOADED', 'LH_Range')
 local function update() events.scripts.OnUpdate(events, .11) end
 local function shownTimer()
- for i = #frames, 1, -1 do
-  local f = frames[i]
-  if f.kind == 'Font' and rawget(f, 'visible') ~= nil then return f end
- end
+ return cooldownBindingMock.font
 end
 local timer = shownTimer()
 assert(timer and not timer.visible)
@@ -57,6 +55,28 @@ cooldownActive = true
 update()
 assert(timer.visible and rawget(timer, 'text') == nil)
 assert(cooldownBindingMock.duration.spell == 'Spell100' and cooldownBindingMock.enabled)
+local fill, label, closing
+for _, f in ipairs(frames) do
+ if f.kind == 'StatusBar' and not fill then fill = f end
+ if f.kind == 'Font' and f ~= timer then
+  if f.text == ')' then closing = f else label = f end
+ end
+end
+assert(label.text == 'In Range (' and closing.visible)
+assert(label.point[1] == 'LEFT' and label.point[3] == 'CENTER')
+timer:SetText('3s')
+events.scripts.OnUpdate(events, .01)
+assert(label.point[4] == -(#label.text + #timer.text + #closing.text) * 2)
+assert(fill.color[2] == .7 * .45)
+ranges.Spell100 = 1
+cooldownActive = false
+update()
+assert(label.text == 'In Range' and not closing.visible and not timer.visible)
+assert(fill.color[2] > .7)
+for i = 1, 6 do update() end
+assert(fill.color[2] == .7)
+cooldownActive = true
+update()
 ranges.Spell100 = 0
 update()
 assert(not timer.visible)

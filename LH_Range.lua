@@ -1,7 +1,10 @@
 local ADDON_NAME = ...
 local Addon = {}
 LH_Range = Addon
-local bar, fill, label, cooldownLabel, cooldownBinding, handle, resizing
+local bar, fill, lossFill, gainGlow, lossGlow, protectedGainGlow, protectedLossGlow
+local label, cooldownLabel, cooldownClose, cooldownBinding, handle, resizing
+local previousCooldownSpell, wasOnCooldown, flashRemaining = nil, false, 0
+local lastPower, lastMaximum, lastPowerType, feedbackRemaining, activeGlow
 local spells = {}
 local petCharge
 local meleeBook
@@ -307,33 +310,81 @@ local function RestorePosition()
         bar:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
     end
 end
-local function MeleePower(class)
-    if class ~= "WARRIOR" and class ~= "ROGUE" and class ~= "DRUID" then return end
+local powerColors = {
+    [1] = {.8, .12, .12}, -- Rage
+    [2] = {1, .5, .25}, -- Focus
+    [3] = {1, .82, 0}, -- Energy
+    [6] = {0, .82, 1}, -- Runic Power
+    [17] = {.79, .26, .99}, -- Fury
+}
+
+local function MeleePower()
     if not UnitPowerType or not UnitPower or not UnitPowerMax then return end
-    local okType, powerType = pcall(UnitPowerType, "player")
-    if not okType or not Public(powerType) or (powerType ~= 1 and powerType ~= 3) then return end
+    local okType, powerType, token = pcall(UnitPowerType, "player")
+    if not okType or not Public(powerType) or type(powerType) ~= "number" or powerType <= 0 then return end
     local okValue, value = pcall(UnitPower, "player", powerType)
     local okMax, maximum = pcall(UnitPowerMax, "player", powerType)
-    if not okValue or not okMax or not Public(value) or not Public(maximum)
-        or type(value) ~= "number" or type(maximum) ~= "number" or maximum <= 0 then return end
-    return math.max(0, math.min(value, maximum)), maximum
+    if not okValue or not okMax then return end
+    local readable = Public(value) and Public(maximum)
+    if readable and (type(value) ~= "number" or type(maximum) ~= "number" or maximum <= 0) then return end
+    local color = powerColors[powerType] or {.7, .55, .85}
+    if PowerBarColor then
+        local entry = PowerBarColor[powerType] or (Public(token) and PowerBarColor[token])
+        if type(entry) == "table" and type(entry.r) == "number"
+            and type(entry.g) == "number" and type(entry.b) == "number" then
+            color = {entry.r, entry.g, entry.b}
+        end
+    end
+    return true, value, maximum, readable, color, powerType
 end
 
-local function UpdateCooldown(spell)
+local function ResetPowerFeedback()
+    lastPower, lastMaximum, lastPowerType, feedbackRemaining, activeGlow = nil, nil, nil, nil, nil
+    if lossFill then lossFill:Hide() end
+    if gainGlow then gainGlow:Hide() end
+    if lossGlow then lossGlow:Hide() end
+    if protectedGainGlow then protectedGainGlow:Hide() end
+    if protectedLossGlow then protectedLossGlow:Hide() end
+end
+
+local function ShowPowerChange(glow, oldValue, newValue, maximum)
+    local startValue, endValue = math.min(oldValue, newValue), math.max(oldValue, newValue)
+    local width = fill:GetWidth()
+    glow:ClearAllPoints()
+    glow:SetPoint("TOPLEFT", fill, "TOPLEFT", width * startValue / maximum, 0)
+    glow:SetPoint("BOTTOMRIGHT", fill, "BOTTOMLEFT", width * endValue / maximum, 0)
+    glow:SetAlpha(1)
+    glow:Show()
+    activeGlow = glow
+    feedbackRemaining = .6
+end
+
+local function CenterCooldownText()
+    if not cooldownLabel:IsShown() then return end
+    local labelWidth, timerWidth, closeWidth = label:GetStringWidth(), cooldownLabel:GetStringWidth(), cooldownClose:GetStringWidth()
+    if Public(labelWidth) and Public(timerWidth) and Public(closeWidth)
+        and type(labelWidth) == "number" and type(timerWidth) == "number" and type(closeWidth) == "number" then
+        label:ClearAllPoints()
+        label:SetPoint("LEFT", fill, "CENTER", -(labelWidth + timerWidth + closeWidth) / 2, 0)
+    end
+end
+
+local function UpdateCooldown(spell, text)
     if cooldownBinding then cooldownBinding:SetEnabled(false) end
     cooldownLabel:Hide()
+    cooldownClose:Hide()
     label:ClearAllPoints()
     label:SetPoint("CENTER")
-    if not spell then return end
+    if not spell then return false end
 
     local duration
     if C_Spell and C_Spell.GetSpellCooldown and C_Spell.GetSpellCooldownDuration then
         local ok, info = pcall(C_Spell.GetSpellCooldown, spell)
         if not ok or not info or not Public(info.isActive) or info.isActive ~= true
-            or not Public(info.isOnGCD) or info.isOnGCD == true then return end
+            or not Public(info.isOnGCD) or info.isOnGCD == true then return false end
         local durationOK
         durationOK, duration = pcall(C_Spell.GetSpellCooldownDuration, spell, true)
-        if not durationOK then return end
+        if not durationOK then return false end
         if duration and cooldownBinding then
             cooldownBinding:SetDuration(duration)
             cooldownBinding:SetEnabled(true)
@@ -348,22 +399,25 @@ local function UpdateCooldown(spell)
     elseif GetSpellCooldown then
         local ok, start, seconds, enabled, rate = pcall(GetSpellCooldown, spell)
         if not ok or not Public(start) or not Public(seconds) or not Public(enabled)
-            or type(start) ~= "number" or type(seconds) ~= "number" or enabled == 0 then return end
+            or type(start) ~= "number" or type(seconds) ~= "number" or enabled == 0 then return false end
         local remaining = start + seconds - GetTime()
         if Public(rate) and type(rate) == "number" and rate > 0 then remaining = remaining / rate end
-        if remaining <= 0 or seconds <= 1.5 then return end
+        if remaining <= 0 or seconds <= 1.5 then return false end
         cooldownLabel:SetText(string.format("%.1fs", remaining))
         cooldownLabel:Show()
     end
     if cooldownLabel:IsShown() then
-        label:ClearAllPoints()
-        label:SetPoint("RIGHT", fill, "CENTER", -3, 0)
+        label:SetText(text .. " (")
+        cooldownClose:Show()
+        CenterCooldownText()
+        return true
     end
+    return false
 end
 
 local function UpdateRange()
     if not bar then return end
-    if not LH_RangeDB.enabled then bar:Hide(); return end
+    if not LH_RangeDB.enabled then bar:Hide(); ResetPowerFeedback(); previousCooldownSpell = nil; wasOnCooldown = false; flashRemaining = 0; return end
     local selfTarget = UnitFlag(UnitIsUnit, "player", "target")
     local _, class = UnitClass("player")
     currentClass = class
@@ -372,7 +426,7 @@ local function UpdateRange()
     local valid = not selfTarget and UnitFlag(UnitExists, "target") == true
         and (attackable or (class == "SHAMAN" and friendly))
         and UnitFlag(UnitIsDeadOrGhost, "target") == false
-    if not valid and LH_RangeDB.locked then bar:Hide(); return end
+    if not valid and LH_RangeDB.locked then bar:Hide(); ResetPowerFeedback(); previousCooldownSpell = nil; wasOnCooldown = false; flashRemaining = 0; return end
     local text, r, g, b, cooldownSpell = "Out of Range", 0.8, 0.12, 0.12
     if valid then
         -- Attackable targets use offensive checks even when also assistable.
@@ -397,19 +451,74 @@ local function UpdateRange()
             elseif InRange(spells.bolt) then text, r, g, b, cooldownSpell = spells.bolt, .15, .7, .2, spells.bolt end
         end
     else text, r, g, b = "LH_Range", 0.45, 0.45, 0.45 end
-    local power, maximum
-    if valid and text == "Melee Range" then power, maximum = MeleePower(class) end
-    if power then
-        label:SetText(string.format("%d/%d", power, maximum))
-        fill:SetValue(power / maximum)
-        if class == "ROGUE" then fill:SetStatusBarColor(1, .82, 0, 1)
-        else fill:SetStatusBarColor(.8, .12, .12, 1) end
-    else
-        label:SetText(text)
-        fill:SetValue(1)
-        fill:SetStatusBarColor(r, g, b, 1)
+    local hasPower, power, maximum, readable, powerColor, powerType
+    if valid and text == "Melee Range" then
+        hasPower, power, maximum, readable, powerColor, powerType = MeleePower()
     end
-    UpdateCooldown(power and nil or cooldownSpell)
+    if hasPower then
+        label:SetFormattedText("%d", power)
+        fill:SetMinMaxValues(0, maximum)
+        fill:SetValue(power)
+        r, g, b = powerColor[1], powerColor[2], powerColor[3]
+        local sameMaximum = not Public(maximum) or lastMaximum == maximum
+        local sameResource = lastPowerType == powerType and sameMaximum
+        if readable then
+            lossFill:Hide()
+            if protectedGainGlow then protectedGainGlow:Hide() end
+            if protectedLossGlow then protectedLossGlow:Hide() end
+            if sameResource and lastPower ~= nil and power ~= lastPower then
+                gainGlow:Hide()
+                lossGlow:Hide()
+                ShowPowerChange(power > lastPower and gainGlow or lossGlow, lastPower, power, maximum)
+            elseif not sameResource or lastPower == nil then
+                gainGlow:Hide()
+                lossGlow:Hide()
+                feedbackRemaining, activeGlow = nil, nil
+            end
+            lastPower, lastMaximum, lastPowerType = power, maximum, powerType
+        else
+            -- Anchor the glow to the current and interpolated bar ends. This
+            -- works even when Lua cannot compare the protected power values.
+            local interpolation = Enum and Enum.StatusBarInterpolation
+                and Enum.StatusBarInterpolation.ExponentialEaseOut
+            if interpolation and protectedGainGlow and protectedLossGlow then
+                lossFill:SetMinMaxValues(0, maximum)
+                if sameResource and lastPower == nil then
+                    lossFill:SetValue(power, interpolation)
+                else
+                    lossFill:SetValue(power)
+                end
+                lossFill:SetAlpha(0)
+                lossFill:Show()
+                lossGlow:Hide()
+                gainGlow:Hide()
+                protectedLossGlow:Show()
+                protectedGainGlow:Show()
+                feedbackRemaining, activeGlow = nil, nil
+                lastPower, lastMaximum, lastPowerType = nil,
+                    Public(maximum) and maximum or nil, powerType
+            else
+                ResetPowerFeedback()
+            end
+        end
+    else
+        ResetPowerFeedback()
+        label:SetText(text)
+        fill:SetMinMaxValues(0, 1)
+        fill:SetValue(1)
+    end
+    local selectedSpell = hasPower and nil or cooldownSpell
+    local onCooldown = UpdateCooldown(selectedSpell, text)
+    if selectedSpell ~= previousCooldownSpell then flashRemaining = 0
+    elseif wasOnCooldown and not onCooldown then flashRemaining = .5 end
+    previousCooldownSpell, wasOnCooldown = selectedSpell, onCooldown
+    if onCooldown then
+        r, g, b = r * .45, g * .45, b * .45
+    elseif flashRemaining > 0 then
+        local strength = .7 * flashRemaining / .5
+        r, g, b = r + (1 - r) * strength, g + (1 - g) * strength, b + (1 - b) * strength
+    end
+    fill:SetStatusBarColor(r, g, b, 1)
     bar:Show()
 end
 local function SetLocked(locked)
@@ -440,12 +549,52 @@ local function Initialize()
     bar:SetBackdropColor(0, 0, 0, 1)
     bar:SetBackdropBorderColor(0.65, 0.59, 0.45, 1)
     fill = CreateFrame("StatusBar", nil, bar)
+    fill:SetFrameLevel(bar:GetFrameLevel() + 2)
     fill:SetPoint("TOPLEFT", 3, -3)
     fill:SetPoint("BOTTOMRIGHT", -3, 3)
     fill:SetStatusBarTexture("Interface\\AddOns\\LH_Range\\Media\\Smooth.tga")
     fill:SetMinMaxValues(0, 1)
     fill:SetValue(1)
     fill:EnableMouse(false)
+    lossFill = CreateFrame("StatusBar", nil, bar)
+    lossFill:SetFrameLevel(bar:GetFrameLevel() + 1)
+    lossFill:SetPoint("TOPLEFT", 3, -3)
+    lossFill:SetPoint("BOTTOMRIGHT", -3, 3)
+    lossFill:SetStatusBarTexture("Interface\\AddOns\\LH_Range\\Media\\Smooth.tga")
+    local lossTexture = lossFill:GetStatusBarTexture()
+    if lossTexture then lossTexture:SetBlendMode("ADD") end
+    lossFill:SetStatusBarColor(1, .08, .04, 1)
+    lossFill:SetMinMaxValues(0, 1)
+    lossFill:SetValue(0)
+    lossFill:EnableMouse(false)
+    lossFill:Hide()
+    gainGlow = fill:CreateTexture(nil, "OVERLAY")
+    gainGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
+    gainGlow:SetVertexColor(.15, 1, .25, 1)
+    gainGlow:SetBlendMode("ADD")
+    gainGlow:Hide()
+    lossGlow = fill:CreateTexture(nil, "OVERLAY")
+    lossGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
+    lossGlow:SetVertexColor(1, .08, .04, 1)
+    lossGlow:SetBlendMode("ADD")
+    lossGlow:Hide()
+    local currentTexture = fill:GetStatusBarTexture()
+    if currentTexture and lossTexture then
+        protectedGainGlow = fill:CreateTexture(nil, "OVERLAY")
+        protectedGainGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
+        protectedGainGlow:SetVertexColor(.15, 1, .25, 1)
+        protectedGainGlow:SetBlendMode("ADD")
+        protectedGainGlow:SetPoint("TOPLEFT", lossTexture, "TOPRIGHT")
+        protectedGainGlow:SetPoint("BOTTOMRIGHT", currentTexture, "BOTTOMRIGHT")
+        protectedGainGlow:Hide()
+        protectedLossGlow = fill:CreateTexture(nil, "OVERLAY")
+        protectedLossGlow:SetTexture("Interface\\Buttons\\WHITE8X8")
+        protectedLossGlow:SetVertexColor(1, .08, .04, 1)
+        protectedLossGlow:SetBlendMode("ADD")
+        protectedLossGlow:SetPoint("TOPLEFT", currentTexture, "TOPRIGHT")
+        protectedLossGlow:SetPoint("BOTTOMRIGHT", lossTexture, "BOTTOMRIGHT")
+        protectedLossGlow:Hide()
+    end
     label = fill:CreateFontString(nil, "OVERLAY")
     label:SetPoint("CENTER")
     label:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
@@ -453,12 +602,20 @@ local function Initialize()
     label:SetShadowColor(0, 0, 0, 1)
     label:SetShadowOffset(1, -1)
     cooldownLabel = fill:CreateFontString(nil, "OVERLAY")
-    cooldownLabel:SetPoint("LEFT", fill, "CENTER", 3, 0)
+    cooldownLabel:SetPoint("LEFT", label, "RIGHT", 0, 0)
     cooldownLabel:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
     cooldownLabel:SetTextColor(1, 1, 1, 1)
     cooldownLabel:SetShadowColor(0, 0, 0, 1)
     cooldownLabel:SetShadowOffset(1, -1)
     cooldownLabel:Hide()
+    cooldownClose = fill:CreateFontString(nil, "OVERLAY")
+    cooldownClose:SetPoint("LEFT", cooldownLabel, "RIGHT", 0, 0)
+    cooldownClose:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    cooldownClose:SetTextColor(1, 1, 1, 1)
+    cooldownClose:SetShadowColor(0, 0, 0, 1)
+    cooldownClose:SetShadowOffset(1, -1)
+    cooldownClose:SetText(")")
+    cooldownClose:Hide()
     if C_DurationUtil and C_DurationUtil.CreateDurationTextBinding
         and C_StringUtil and C_StringUtil.CreateSecondsFormatter then
         local formatter = C_StringUtil.CreateSecondsFormatter()
@@ -505,14 +662,16 @@ local function Initialize()
     UpdateRange()
 end
 local events = CreateFrame("Frame")
-for _, event in ipairs({"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_TARGET_CHANGED", "SPELLS_CHANGED", "UNIT_PET", "PET_BAR_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED"}) do events:RegisterEvent(event) end
+for _, event in ipairs({"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_TARGET_CHANGED", "SPELLS_CHANGED", "UNIT_PET", "PET_BAR_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER"}) do events:RegisterEvent(event) end
 events:SetScript("OnEvent", function(_, event, name)
     if event == "ADDON_LOADED" then
         if name == ADDON_NAME and not bar then Initialize() end
     elseif bar then
+        if (event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT"
+            or event == "UNIT_MAXPOWER" or event == "UNIT_DISPLAYPOWER") and name ~= "player" then return end
         if event == "SPELLS_CHANGED" or event == "PLAYER_ENTERING_WORLD" or event == "UNIT_PET"
             or event == "PET_BAR_UPDATE" then RefreshSpells() end
-        if event == "PLAYER_TARGET_CHANGED" then warriorZone = nil end
+        if event == "PLAYER_TARGET_CHANGED" then warriorZone = nil; ResetPowerFeedback() end
         UpdateSize()
         UpdateRange()
     end
@@ -530,8 +689,19 @@ events:SetScript("OnUpdate", function(_, elapsed)
             UpdateSize()
         end
     end
+    flashRemaining = math.max(0, flashRemaining - elapsed)
+    if feedbackRemaining then
+        feedbackRemaining = math.max(0, feedbackRemaining - elapsed)
+        if feedbackRemaining == 0 then
+            activeGlow:Hide()
+            feedbackRemaining, activeGlow = nil, nil
+        else
+            activeGlow:SetAlpha(math.min(1, feedbackRemaining / .3))
+        end
+    end
     elapsedTotal = elapsedTotal + elapsed
     if elapsedTotal >= 0.1 then elapsedTotal = 0; UpdateSize(); UpdateRange() end
+    CenterCooldownText()
 end)
 SLASH_LH_RANGE1 = "/lh_range"
 function Addon:GetOption(key)

@@ -6,9 +6,9 @@
 
 <ul>
   <li>Melee range for every class.</li>
-  <li>In melee range, a live Rage or Energy bar replaces the range label for Warriors, Rogues and Druids when that resource is active. Rogues use yellow; Warriors and Druids use red.</li>
+  <li>In melee range, a live bar for the active non-Mana resource replaces the range label (for example Rage, Energy, Focus, Runic Power or Fury). The current value appears on the bar. Gained resource briefly glows green; spent resource glows red.</li>
   <li>Built-in spell-range zones for Shamans, Hunters and Warriors, plus configurable ability checks for every class.</li>
-  <li>When the ability used for the current range cue is on cooldown, its remaining time appears beside the range label.</li>
+  <li>When the ability used for the current range cue is on cooldown, its remaining time appears in parentheses beside the centered range label. The bar dims during cooldown and flashes briefly when the ability becomes available.</li>
   <li>A Dead Zone cue when the target is beyond melee and too close for the configured ranged ability, where the client provides a usable range check.</li>
   <li>A movable, resizable bar that can match the width of LH ExpBar or the minimap.</li>
 </ul>
