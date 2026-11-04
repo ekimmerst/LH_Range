@@ -1,7 +1,7 @@
 local ADDON_NAME = ...
 local Addon = {}
 LH_Range = Addon
-local bar, fill, lossFill, gainGlow, lossGlow, protectedGainGlow, protectedLossGlow
+local bar, fill, lossFill, healthFrame, healthBar, healthColorCurve, gainGlow, lossGlow, protectedGainGlow, protectedLossGlow
 local label, cooldownLabel, cooldownClose, cooldownBinding, handle, resizing
 local previousCooldownSpell, wasOnCooldown, flashRemaining = nil, false, 0
 local lastPower, lastMaximum, lastPowerType, feedbackRemaining, activeGlow
@@ -281,6 +281,7 @@ local function StandardWidth()
 end
 local function UpdateSize()
     bar:SetSize(math.max(70, StandardWidth() * LH_RangeDB.widthFactor), 20 * LH_RangeDB.heightFactor)
+    if healthFrame then healthFrame:SetHeight(10 * LH_RangeDB.heightFactor) end
 end
 local function SavePosition()
     local x, y = bar:GetCenter()
@@ -452,7 +453,7 @@ local function UpdateRange()
         end
     else text, r, g, b = "LH_Range", 0.45, 0.45, 0.45 end
     local hasPower, power, maximum, readable, powerColor, powerType
-    if valid and text == "Melee Range" then
+    if LH_RangeDB.powerEnabled and valid and text == "Melee Range" then
         hasPower, power, maximum, readable, powerColor, powerType = MeleePower()
     end
     if hasPower then
@@ -521,6 +522,28 @@ local function UpdateRange()
     fill:SetStatusBarColor(r, g, b, 1)
     bar:Show()
 end
+local function UpdateHealth()
+    if not healthBar or not UnitHealth or not UnitHealthMax then return end
+    local okValue, value = pcall(UnitHealth, "player")
+    local okMax, maximum = pcall(UnitHealthMax, "player")
+    if not okValue or not okMax then return end
+    healthBar:SetMinMaxValues(0, maximum)
+    healthBar:SetValue(value)
+    if healthColorCurve and UnitHealthPercent then
+        local okColor, color = pcall(UnitHealthPercent, "player", true, healthColorCurve)
+        if okColor and color then
+            healthBar:SetStatusBarColor(color:GetRGB())
+            return
+        end
+    end
+    if Public(value) and Public(maximum) and type(value) == "number"
+        and type(maximum) == "number" and maximum > 0 then
+        local fraction = value / maximum
+        if fraction >= .5 then healthBar:SetStatusBarColor(.15, .7, .2)
+        elseif fraction >= .25 then healthBar:SetStatusBarColor(1, .5, .1)
+        else healthBar:SetStatusBarColor(.8, .12, .12) end
+    end
+end
 local function SetLocked(locked)
     StopMoving()
     FinishResize()
@@ -534,6 +557,8 @@ local function Initialize()
     LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
     currentClass = select(2, UnitClass("player"))
     if type(LH_RangeDB.enabled) ~= "boolean" then LH_RangeDB.enabled = true end
+    if type(LH_RangeDB.healthEnabled) ~= "boolean" then LH_RangeDB.healthEnabled = true end
+    if type(LH_RangeDB.powerEnabled) ~= "boolean" then LH_RangeDB.powerEnabled = true end
     if LH_RangeDB.locked == nil then LH_RangeDB.locked = true end
     for _, key in ipairs({"widthFactor", "heightFactor"}) do
         local value = LH_RangeDB[key]
@@ -544,8 +569,9 @@ local function Initialize()
     bar:SetMovable(true)
     bar:SetClampedToScreen(true)
     bar:RegisterForDrag("LeftButton")
-    bar:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
-        insets = {left = 2, right = 2, top = 2, bottom = 2}})
+    local backdrop = {bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
+        insets = {left = 2, right = 2, top = 2, bottom = 2}}
+    bar:SetBackdrop(backdrop)
     bar:SetBackdropColor(0, 0, 0, 1)
     bar:SetBackdropBorderColor(0.65, 0.59, 0.45, 1)
     fill = CreateFrame("StatusBar", nil, bar)
@@ -556,6 +582,34 @@ local function Initialize()
     fill:SetMinMaxValues(0, 1)
     fill:SetValue(1)
     fill:EnableMouse(false)
+    healthFrame = CreateFrame("Frame", "LH_RangeHealthFrame", bar, "BackdropTemplate")
+    healthFrame:SetPoint("BOTTOMLEFT", bar, "TOPLEFT")
+    healthFrame:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT")
+    healthFrame:SetBackdrop(backdrop)
+    healthFrame:SetBackdropColor(0, 0, 0, 1)
+    healthFrame:SetBackdropBorderColor(.65, .59, .45, 1)
+    healthFrame:EnableMouse(false)
+    healthFrame:SetShown(LH_RangeDB.healthEnabled)
+    healthBar = CreateFrame("StatusBar", "LH_RangeHealthBar", healthFrame)
+    healthBar:SetFrameLevel(healthFrame:GetFrameLevel() + 2)
+    healthBar:SetPoint("TOPLEFT", 3, -3)
+    healthBar:SetPoint("BOTTOMRIGHT", -3, 3)
+    healthBar:SetStatusBarTexture("Interface\\AddOns\\LH_Range\\Media\\Smooth.tga")
+    healthBar:SetMinMaxValues(0, 1)
+    healthBar:SetValue(1)
+    healthBar:SetStatusBarColor(.15, .7, .2)
+    healthBar:EnableMouse(false)
+    if C_CurveUtil and C_CurveUtil.CreateColorCurve and CreateColor
+        and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Linear then
+        healthColorCurve = C_CurveUtil.CreateColorCurve()
+        healthColorCurve:SetType(Enum.LuaCurveType.Linear)
+        healthColorCurve:AddPoint(0, CreateColor(.8, .12, .12))
+        healthColorCurve:AddPoint(.249999, CreateColor(.8, .12, .12))
+        healthColorCurve:AddPoint(.25, CreateColor(1, .5, .1))
+        healthColorCurve:AddPoint(.499999, CreateColor(1, .5, .1))
+        healthColorCurve:AddPoint(.5, CreateColor(.15, .7, .2))
+        healthColorCurve:AddPoint(1, CreateColor(.15, .7, .2))
+    end
     lossFill = CreateFrame("StatusBar", nil, bar)
     lossFill:SetFrameLevel(bar:GetFrameLevel() + 1)
     lossFill:SetPoint("TOPLEFT", 3, -3)
@@ -660,13 +714,18 @@ local function Initialize()
     bar:EnableMouse(not LH_RangeDB.locked)
     handle:SetShown(not LH_RangeDB.locked)
     UpdateRange()
+    UpdateHealth()
 end
 local events = CreateFrame("Frame")
-for _, event in ipairs({"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_TARGET_CHANGED", "SPELLS_CHANGED", "UNIT_PET", "PET_BAR_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER"}) do events:RegisterEvent(event) end
+for _, event in ipairs({"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_TARGET_CHANGED", "SPELLS_CHANGED", "UNIT_PET", "PET_BAR_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER", "UNIT_HEALTH", "UNIT_MAXHEALTH"}) do events:RegisterEvent(event) end
 events:SetScript("OnEvent", function(_, event, name)
     if event == "ADDON_LOADED" then
         if name == ADDON_NAME and not bar then Initialize() end
     elseif bar then
+        if event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" then
+            if name == "player" then UpdateHealth() end
+            return
+        end
         if (event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT"
             or event == "UNIT_MAXPOWER" or event == "UNIT_DISPLAYPOWER") and name ~= "player" then return end
         if event == "SPELLS_CHANGED" or event == "PLAYER_ENTERING_WORLD" or event == "UNIT_PET"
@@ -674,6 +733,7 @@ events:SetScript("OnEvent", function(_, event, name)
         if event == "PLAYER_TARGET_CHANGED" then warriorZone = nil; ResetPowerFeedback() end
         UpdateSize()
         UpdateRange()
+        if event == "PLAYER_ENTERING_WORLD" then UpdateHealth() end
     end
 end)
 local elapsedTotal = 0
@@ -706,13 +766,25 @@ end)
 SLASH_LH_RANGE1 = "/lh_range"
 function Addon:GetOption(key)
     if LH_RangeDB and LH_RangeDB[key] ~= nil then return LH_RangeDB[key] end
-    if key == "enabled" or key == "locked" then return true end
+    if key == "enabled" or key == "locked" or key == "healthEnabled" or key == "powerEnabled" then return true end
     return 1
 end
 function Addon:SetEnabled(enabled)
     if not bar then return end
     StopMoving(); FinishResize()
     LH_RangeDB.enabled = enabled == true
+    UpdateRange()
+    if self.RefreshSettings then self:RefreshSettings() end
+end
+function Addon:SetHealthEnabled(enabled)
+    if not healthFrame then return end
+    LH_RangeDB.healthEnabled = enabled == true
+    healthFrame:SetShown(LH_RangeDB.healthEnabled)
+    if self.RefreshSettings then self:RefreshSettings() end
+end
+function Addon:SetPowerEnabled(enabled)
+    if not bar then return end
+    LH_RangeDB.powerEnabled = enabled == true
     UpdateRange()
     if self.RefreshSettings then self:RefreshSettings() end
 end

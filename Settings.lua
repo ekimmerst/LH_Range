@@ -87,6 +87,12 @@ local function Build(category, layout)
     local enabled = Proxy(category, "enabled", "boolean", "Enable the range bar", true,
         function() return Addon:GetOption("enabled") end, function(v) Addon:SetEnabled(v) end)
     Settings.CreateCheckbox(category, enabled, "Show melee range and configured spell distances for your class. Disabling hides the bar immediately. Saved per character.")
+    local health = Proxy(category, "healthEnabled", "boolean", "Show player health bar", true,
+        function() return Addon:GetOption("healthEnabled") end, function(v) Addon:SetHealthEnabled(v) end)
+    Settings.CreateCheckbox(category, health, "Show player health directly above the range bar. Saved per character.")
+    local power = Proxy(category, "powerEnabled", "boolean", "Show resource bar in melee range", true,
+        function() return Addon:GetOption("powerEnabled") end, function(v) Addon:SetPowerEnabled(v) end)
+    Settings.CreateCheckbox(category, power, "Replace the melee-range label with your active Rage, Energy, Focus, Runic Power or other non-Mana resource. Saved per character.")
     layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Class spells"))
     layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for current class"}))
     layout:AddInitializer(CreateSettingsButtonInitializer("Use built-in class behavior", "Clear spells", function() Addon:ClearClassSpells() end,
