@@ -60,6 +60,7 @@
 <p><strong>1.5.2 - Forever and Retail</strong></p>
 
 <ul>
+  <li>Added an optional player health bar above the range bar and separate controls for the health and melee resource displays.</li>
   <li>Added a live non-Mana resource bar in melee range for any class with an active resource, with brief color feedback when resource is gained or spent.</li>
   <li>Show the range-check ability's remaining cooldown beside the range cue, dim the bar during cooldown, and flash it when the ability becomes available.</li>
 </ul>
