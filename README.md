@@ -1,13 +1,13 @@
 <h1 style="color: #d9a94b;">LH Range</h1>
 
-<p>LH Range shows melee range and configurable spell-range zones for your target on one compact, movable bar.</p>
+<p>LH Range shows melee range and configurable spell-range zones for your target on one compact, movable bar. In melee range, it can show your current Energy, Rage or other active non-Mana resource as a bar and number, with an animation when you gain or spend it.</p>
 
 <h2 style="color: #73c9c4;">What it shows</h2>
 
 <ul>
   <li>Melee range for every class.</li>
   <li>A text-free player health bar sits directly above the range bar at half its height. It is green from 50% health, orange from 25%, and red below 25%.</li>
-  <li>In melee range, a live bar for the active non-Mana resource replaces the range label (for example Rage, Energy, Focus, Runic Power or Fury). The current value appears on the bar. Gained resource briefly glows green; spent resource glows red.</li>
+  <li>In melee range, the optional resource display replaces the range label with a live bar and numeric value for your active non-Mana resource, such as Energy, Rage, Focus, Runic Power or Fury. When the value changes, an animation highlights the gained portion in green or the spent portion in red.</li>
   <li>Built-in spell-range zones for Shamans, Hunters and Warriors, plus configurable ability checks for every class.</li>
   <li>When the ability used for the current range cue is on cooldown, its remaining time appears in parentheses beside the centered range label. The bar dims during cooldown and flashes briefly when the ability becomes available.</li>
   <li>A Dead Zone cue when the target is beyond melee and too close for the configured ranged ability, where the client provides a usable range check.</li>
