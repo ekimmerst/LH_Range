@@ -27,7 +27,7 @@
 
 <h2 style="color: #73c9c4;">More LH addons</h2>
 
-<p>Choose only the pieces you want. Each companion addon also requires LH Tweaks.</p>
+<p>Choose only the pieces you want. Most companion addons require LH Tweaks; LH NameplateQuestInfo also works without it.</p>
 
 <ul>
   <li><strong>LH AuraBars:</strong> Compact bars for buffs, debuffs and spell cooldowns.</li>
@@ -53,6 +53,13 @@
 <p><strong>LH Tweaks is required</strong> and must be installed alongside LH Range. LH ExpBar is optional. This began as a simple range cue for my own characters; please tell me in the CurseForge comments if a class ability or range zone needs attention.</p>
 
 <h2 style="color: #73c9c4;">Changelog</h2>
+
+<p><strong>1.5.2 - Forever and Retail</strong></p>
+
+<ul>
+  <li>Added a live non-Mana resource bar in melee range for any class with an active resource, with brief color feedback when resource is gained or spent.</li>
+  <li>Show the range-check ability's remaining cooldown beside the range cue, dim the bar during cooldown, and flash it when the ability becomes available.</li>
+</ul>
 
 <p><strong>1.5.1 - Forever</strong></p>
 
