@@ -119,8 +119,7 @@ local function InRange(name)
 end
 
 local function ClassSpells()
-    local classes = type(LH_RangeClassDB) == "table" and LH_RangeClassDB
-    return classes and type(classes[currentClass]) == "table" and classes[currentClass] or nil
+    return LH_RangeDB and type(LH_RangeDB.spells) == "table" and LH_RangeDB.spells or nil
 end
 
 local function ConfiguredSpell(id)
@@ -556,6 +555,10 @@ local function Initialize()
     LH_RangeDB = type(LH_RangeDB) == "table" and LH_RangeDB or {}
     LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
     currentClass = select(2, UnitClass("player"))
+    if LH_RangeDB.spells == nil and type(LH_RangeClassDB[currentClass]) == "table" then
+        LH_RangeDB.spells = {}
+        for key, value in pairs(LH_RangeClassDB[currentClass]) do LH_RangeDB.spells[key] = value end
+    end
     if type(LH_RangeDB.enabled) ~= "boolean" then LH_RangeDB.enabled = true end
     if type(LH_RangeDB.healthEnabled) ~= "boolean" then LH_RangeDB.healthEnabled = true end
     if type(LH_RangeDB.powerEnabled) ~= "boolean" then LH_RangeDB.powerEnabled = true end
@@ -564,6 +567,9 @@ local function Initialize()
         local value = LH_RangeDB[key]
         LH_RangeDB[key] = type(value) == "number" and math.max(0.5, math.min(2, value)) or 1
     end
+    LH_LayoutProfiles:Register(ADDON_NAME, LH_RangeDB, LH_RangeDB,
+        {"position", "widthFactor", "heightFactor", "locked", "enabled",
+            "healthEnabled", "powerEnabled"})
     bar = CreateFrame("Frame", "LH_RangeFrame", UIParent, "BackdropTemplate")
     bar:SetFrameStrata("MEDIUM")
     bar:SetMovable(true)
@@ -797,8 +803,7 @@ function Addon:SetSizeFactor(key, value)
 end
 
 function Addon:GetClassSpells()
-    local _, class = UnitClass("player")
-    local saved = type(LH_RangeClassDB) == "table" and LH_RangeClassDB[class]
+    local saved = LH_RangeDB and LH_RangeDB.spells
     local copy = {}
     if type(saved) == "table" then
         copy.custom = saved.custom == true
@@ -828,8 +833,7 @@ function Addon:SetClassSpell(key, value)
     end
     saved[key] = value ~= "" and (tonumber(value) or value) or nil
     saved.custom = true
-    LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
-    LH_RangeClassDB[class] = saved
+    LH_RangeDB.spells = saved
     currentClass = class
     UpdateRange()
     return true
@@ -849,16 +853,14 @@ function Addon:SetClassSpells(values)
     end
     local _, class = UnitClass("player")
     if not class then return false end
-    LH_RangeClassDB = type(LH_RangeClassDB) == "table" and LH_RangeClassDB or {}
-    LH_RangeClassDB[class] = copy
+    LH_RangeDB.spells = copy
     currentClass = class
     UpdateRange()
     return true
 end
 
 function Addon:ClearClassSpells()
-    local _, class = UnitClass("player")
-    if type(LH_RangeClassDB) == "table" then LH_RangeClassDB[class] = nil end
+    LH_RangeDB.spells = {custom = false}
     UpdateRange()
     if self.RefreshSettings then self:RefreshSettings() end
 end

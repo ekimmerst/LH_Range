@@ -27,7 +27,7 @@ function LHRangeSpellPanelMixin:OnLoad()
     note:SetPoint("TOPLEFT", 8, -4)
     note:SetWidth(440)
     note:SetJustifyH("LEFT")
-    note:SetText("Enter localized ability names or spell IDs. Press Enter or leave a field to save; leave melee empty for automatic detection.")
+    note:SetText("Enter ability names or spell IDs for this character. Press Enter or leave a field to save; leave melee empty for automatic detection.")
     self.note = note
     for index, row in ipairs({{"melee", "Melee"}, {8, "8 yards"}, {10, "10 yards"}, {20, "20 yards"}, {30, "30 yards"}, {40, "40 yards"}}) do
         local key = row[1]
@@ -68,6 +68,7 @@ function LHRangeSpellPanelMixin:RefreshSpells()
 end
 local function Build(category, layout)
     Addon.category = category
+    LH_LayoutProfiles:AddSetting(category, layout, addonName)
     layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Positioning"))
     local lock = Proxy(category, "locked", "boolean", "Lock range bar", true,
         function() return Addon:GetOption("locked") end,
@@ -93,8 +94,8 @@ local function Build(category, layout)
     local power = Proxy(category, "powerEnabled", "boolean", "Show resource bar in melee range", true,
         function() return Addon:GetOption("powerEnabled") end, function(v) Addon:SetPowerEnabled(v) end)
     Settings.CreateCheckbox(category, power, "Replace the melee-range label with your active Rage, Energy, Focus, Runic Power or other non-Mana resource. Saved per character.")
-    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Class spells"))
-    layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for current class"}))
+    layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("This character's range spells"))
+    layout:AddInitializer(Settings.CreatePanelInitializer("LHRangeSpellPanelTemplate", {name = "Spells for this character"}))
     layout:AddInitializer(CreateSettingsButtonInitializer("Use built-in class behavior", "Clear spells", function() Addon:ClearClassSpells() end,
         "Remove custom spells for this class and use the built-in range checks.", true))
     EventRegistry:RegisterCallback("Settings.CategoryDefaulted",function(_,selected) if selected==category then Defaults() end end,Addon)
